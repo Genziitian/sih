@@ -1,0 +1,153 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Design tokens. Clinical field instrument, not a SaaS dashboard.
+   No gradients, no shadows, hairline borders, 4px radius on controls.
+--------------------------------------------------------------------------- */
+@theme {
+  --color-canvas: #f7f7f4;
+  --color-surface: #ffffff;
+  --color-ink: #14201c;
+  --color-muted: #5a6862;
+  --color-line: #dcddd6;
+  --color-primary: #1b5e4a;
+  --color-primary-ink: #123f32;
+  --color-primary-wash: #eef3f1;
+  --color-alert: #b3401c;
+  --color-alert-wash: #fbf0ec;
+
+  /* Severity. Never used alone — always paired with grade number + action. */
+  --color-g0: #1b5e4a;
+  --color-g1: #7a6410;
+  --color-g2: #a9591a;
+  --color-g3: #b3401c;
+  --color-g4: #7f2412;
+  --color-ungradable: #5a6862;
+
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --radius-control: 4px;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.45;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+  * {
+    border-color: var(--color-line);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  button {
+    font: inherit;
+    color: inherit;
+  }
+  input,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Numerals line up in every table, metric and reading. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+}
+
+@layer utilities {
+  .hairline {
+    border-width: 1px;
+    border-style: solid;
+    border-color: var(--color-line);
+  }
+  .label {
+    font-size: 12px;
+    line-height: 1.3;
+    color: var(--color-muted);
+    letter-spacing: 0.01em;
+  }
+}
+
+/* Range inputs: flat, clinical, 48px touch target. */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 48px;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 2px;
+  background: var(--color-line);
+}
+input[type="range"]::-moz-range-track {
+  height: 2px;
+  background: var(--color-line);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 22px;
+  width: 22px;
+  margin-top: -10px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 2px solid var(--color-surface);
+}
+input[type="range"]::-moz-range-thumb {
+  height: 18px;
+  width: 18px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 2px solid var(--color-surface);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* --- Print: the report view is the only thing that reaches paper --------- */
+@media print {
+  @page {
+    margin: 14mm;
+    size: A4 portrait;
+  }
+  body {
+    background: #fff;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-page {
+    box-shadow: none !important;
+    border: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+  .print-break {
+    break-inside: avoid;
+  }
+}
