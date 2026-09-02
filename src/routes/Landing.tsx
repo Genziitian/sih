@@ -367,25 +367,28 @@ export function Landing() {
 
       {/* --- explore --- */}
       <section id="explore" className="shell py-16 lg:py-24 scroll-mt-20">
-        <Head
-          eyebrow="Explainability"
-          title="Ask the model why."
-          sub="Click any finding to zoom in on the evidence behind the grade."
-        />
-        <Reveal delay={100} y={24} className="mt-10">
-          <FundusExplorer
-            src={URL}
-            lesions={BUILD.lesions}
-            attention={BUILD.attention}
-            findings={CASE.counts}
+        {/* Heading and card share one measure so their left edges line up. */}
+        <div className="mx-auto max-w-[940px]">
+          <Head
+            eyebrow="Explainability"
+            title="Ask the model why."
+            sub="Click any finding to zoom in on the evidence behind the grade."
           />
-        </Reveal>
-        <Reveal delay={60}>
-          <p className="label mt-5 max-w-xl">
-            Images here are synthetic. Lesion positions are generated with the image, so the
-            overlays mark something genuinely visible.
-          </p>
-        </Reveal>
+          <Reveal delay={100} y={24} className="mt-9">
+            <FundusExplorer
+              src={URL}
+              lesions={BUILD.lesions}
+              attention={BUILD.attention}
+              findings={CASE.counts}
+            />
+          </Reveal>
+          <Reveal delay={60}>
+            <p className="label mt-4">
+              Synthetic image. Lesion positions are generated with it, so every circle marks
+              something genuinely there.
+            </p>
+          </Reveal>
+        </div>
       </section>
 
       {/* --- how it works --- */}

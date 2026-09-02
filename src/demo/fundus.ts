@@ -141,12 +141,12 @@ function vesselPaths(rand: () => number, discX: number, sweep: number): string {
     walk(ex, ey, angle + curve - spread, length * (0.58 + rand() * 0.18), width * 0.62, depth - 1)
   }
 
-  // Four arcades leaving the optic disc, curving around the macula.
-  const bases = [-1.05, -0.35, 0.35, 1.05]
-  for (const base of bases) {
-    walk(discX, CENTER, sweep * (Math.PI / 2 - base * 0.9) + (sweep < 0 ? Math.PI : 0), 190, 11, 4)
+  // Superior and inferior arcades leave the disc and curve around the macula,
+  // so the spread has to straddle the axis pointing at it — not sit on one side.
+  const toward = sweep > 0 ? 0 : Math.PI
+  for (const offset of [-1.2, -0.62, -0.22, 0.22, 0.62, 1.2]) {
+    walk(discX, CENTER, toward + offset, 195, 10.5, 4)
   }
-  walk(discX, CENTER, sweep > 0 ? 0 : Math.PI, 150, 7, 3)
   return segments.join('')
 }
 
