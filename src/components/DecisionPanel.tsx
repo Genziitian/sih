@@ -71,7 +71,7 @@ export function DecisionPanel({
             {REASONS.map((r) => (
               <label
                 key={r.id}
-                className="flex items-center gap-3 min-h-12 px-2 -mx-2 rounded-[4px] hover:bg-canvas cursor-pointer border-b border-line last:border-0"
+                className="flex items-center gap-3 min-h-12 px-2 -mx-2 rounded-control hover:bg-canvas cursor-pointer border-b border-line last:border-0"
               >
                 <input
                   type="radio"

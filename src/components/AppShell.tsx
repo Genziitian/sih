@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import type { Role } from '../types'
 import { useStore } from '../store'
 import { DEMO_CASES } from '../demo/cases'
@@ -52,7 +52,7 @@ function DemoControls({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="bg-surface border-t border-line">
-      <div className="mx-auto max-w-[1400px] px-4 py-4">
+      <div className="shell py-4">
         <div className="flex items-baseline justify-between gap-4 mb-3">
           <div>
             <h2 className="text-[13px] font-semibold m-0">Prototype controls</h2>
@@ -111,26 +111,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh flex flex-col">
       <header className="bg-surface border-b border-line sticky top-0 z-20">
-        <div className="mx-auto max-w-[1400px] px-4 h-14 flex items-center gap-4">
-          <div className="flex items-center gap-2.5 shrink-0">
-            <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden>
-              <circle cx="11" cy="11" r="9" fill="none" stroke="var(--color-primary)" strokeWidth="1.6" />
-              <circle cx="14" cy="11" r="3" fill="var(--color-primary)" />
+        <div className="shell h-15 min-h-15 flex items-center gap-5 py-2.5">
+          <Link
+            to="/"
+            className="flex items-center gap-2.5 shrink-0 no-underline text-ink"
+            title="Back to the overview"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
+              <circle cx="12" cy="12" r="10" fill="none" stroke="var(--color-primary)" strokeWidth="1.7" />
+              <circle cx="15.5" cy="12" r="3.6" fill="var(--color-primary)" />
             </svg>
-            <span className="text-[14px] font-semibold tracking-[-0.01em]">
+            <span className="text-[14.5px] font-semibold tracking-[-0.01em] hidden sm:inline">
               Retinal screening
             </span>
-          </div>
+          </Link>
 
-          <nav className="flex items-center gap-1" aria-label="Primary">
+          <span className="w-px h-6 bg-line hidden sm:block" aria-hidden />
+
+          <nav className="flex items-center gap-1 min-w-0" aria-label="Primary">
             {nav.map((n) => (
               <NavLink
                 key={n.to}
                 to={n.to}
                 className={({ isActive }) =>
                   [
-                    'min-h-9 px-3 flex items-center text-[14px] rounded-[4px]',
-                    isActive ? 'bg-primary-wash text-primary-ink font-medium' : 'text-muted hover:text-ink',
+                    'min-h-9 px-3 flex items-center text-[14px] rounded-control no-underline whitespace-nowrap transition-colors',
+                    isActive
+                      ? 'bg-primary-wash text-primary-ink font-medium'
+                      : 'text-muted hover:text-ink hover:bg-sunken',
                   ].join(' ')
                 }
               >
@@ -141,12 +149,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="flex-1" />
 
-          <div className="hidden md:block">
+          <div className="hidden lg:flex items-center gap-3">
             <OfflineIndicator />
+            <span className="w-px h-6 bg-line" aria-hidden />
           </div>
 
-          <label className="flex items-center gap-2">
-            <span className="label hidden sm:inline">Role</span>
+          <label className="flex items-center gap-2 shrink-0">
+            <span className="label hidden md:inline">Role</span>
             <select
               value={role}
               onChange={(e) => {
@@ -154,7 +163,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 setRole(next)
                 navigate(ROLE_NAV[next][0].to)
               }}
-              className="min-h-9 px-2 bg-surface border border-line rounded-[4px] text-[14px]"
+              className="min-h-9 px-2.5 bg-surface border border-line-strong rounded-control text-[13.5px] font-medium"
               aria-label="Prototype role"
             >
               {(Object.keys(ROLE_LABELS) as Role[]).map((r) => (
@@ -168,23 +177,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button
             onClick={() => setDemoOpen((v) => !v)}
             aria-expanded={demoOpen}
-            className="min-h-9 px-2 label hover:text-ink underline"
+            className={[
+              'min-h-9 px-3 text-[13px] font-medium rounded-control border transition-colors shrink-0',
+              demoOpen
+                ? 'bg-primary-wash border-primary-wash text-primary-ink'
+                : 'bg-surface border-line-strong text-muted hover:text-ink',
+            ].join(' ')}
           >
             Prototype
           </button>
         </div>
 
-        <div className="md:hidden border-t border-line px-4 py-2">
-          <OfflineIndicator />
+        <div className="lg:hidden border-t border-line">
+          <div className="shell py-2">
+            <OfflineIndicator />
+          </div>
         </div>
 
         {demoOpen && <DemoControls onClose={() => setDemoOpen(false)} />}
       </header>
 
-      <main className="flex-1 mx-auto w-full max-w-[1400px] px-4 py-5">{children}</main>
+      <main className="flex-1 shell py-6">{children}</main>
 
-      <footer className="border-t border-line">
-        <div className="mx-auto max-w-[1400px] px-4 py-3 label">
+      <footer className="border-t border-line mt-4">
+        <div className="shell py-4 label">
           AI-assisted screening prototype. Results are not a diagnosis; a clinician confirms every
           referral. Fundus images shown are synthetic.
         </div>

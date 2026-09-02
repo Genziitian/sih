@@ -14,7 +14,7 @@ export function QueueFilters({
 }) {
   const options: QueueFilter[] = ['all', ...PRIORITY_ORDER]
   return (
-    <div className="inline-flex hairline rounded-[4px] overflow-hidden" role="tablist">
+    <div className="inline-flex hairline rounded-control overflow-hidden" role="tablist">
       {options.map((o) => {
         const active = value === o
         return (

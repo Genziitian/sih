@@ -14,7 +14,7 @@ export function EyeSelector({
   return (
     <div>
       <span className="label block mb-1">Eye</span>
-      <div className="inline-flex hairline rounded-[4px] overflow-hidden">
+      <div className="inline-flex hairline rounded-control overflow-hidden">
         {(['right', 'left'] as EyeSide[]).map((side) => {
           const active = value === side
           return (

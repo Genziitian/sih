@@ -23,7 +23,7 @@ export function OverlaySelector({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <div className="inline-flex hairline rounded-[4px] overflow-hidden" role="tablist">
+      <div className="inline-flex hairline rounded-control overflow-hidden" role="tablist">
         {MODES.map((m) => {
           const active = mode === m.id
           return (

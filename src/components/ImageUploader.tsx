@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import type { EyeSide } from '../types'
 import { CAPTURE_DEMO_IDS, demoCase } from '../demo/cases'
 import { resolveFundusSrc, specToUrl } from '../demo/fundus'
+import { CameraCapture } from './CameraCapture'
 import { Button } from './ui'
 
 function readFile(file: File): Promise<string> {
@@ -21,9 +22,9 @@ export function ImageUploader({
   onPick: (src: string, label: string, demoCaseId?: string) => void
 }) {
   const fileInput = useRef<HTMLInputElement>(null)
-  const cameraInput = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
   const [rejected, setRejected] = useState<string | null>(null)
+  const [camera, setCamera] = useState(false)
 
   const accept = async (file: File | undefined) => {
     if (!file) return
@@ -33,6 +34,18 @@ export function ImageUploader({
     }
     setRejected(null)
     onPick(await readFile(file), file.name)
+  }
+
+  if (camera) {
+    return (
+      <CameraCapture
+        onCapture={(src, label) => {
+          setCamera(false)
+          onPick(src, label)
+        }}
+        onCancel={() => setCamera(false)}
+      />
+    )
   }
 
   return (
@@ -67,21 +80,13 @@ export function ImageUploader({
           <Button variant="primary" onClick={() => fileInput.current?.click()}>
             Choose image
           </Button>
-          <Button onClick={() => cameraInput.current?.click()}>Use camera</Button>
+          <Button onClick={() => setCamera(true)}>Use camera</Button>
         </div>
         {rejected && <p className="text-[13px] text-alert m-0">{rejected}</p>}
         <input
           ref={fileInput}
           type="file"
           accept="image/png,image/jpeg,image/webp"
-          className="sr-only"
-          onChange={(e) => void accept(e.target.files?.[0] ?? undefined)}
-        />
-        <input
-          ref={cameraInput}
-          type="file"
-          accept="image/*"
-          capture="environment"
           className="sr-only"
           onChange={(e) => void accept(e.target.files?.[0] ?? undefined)}
         />

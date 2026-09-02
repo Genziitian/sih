@@ -4,10 +4,12 @@ type Variant = 'primary' | 'secondary' | 'quiet' | 'alert'
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    'bg-primary text-white border-primary hover:bg-primary-ink disabled:bg-line disabled:text-muted disabled:border-line',
+    'bg-primary text-white border-primary hover:bg-primary-hover ' +
+    'disabled:bg-sunken disabled:text-faint disabled:border-line',
   secondary:
-    'bg-surface text-ink border-line hover:border-ink disabled:text-muted disabled:border-line',
-  quiet: 'bg-transparent text-muted border-transparent hover:text-ink',
+    'bg-surface text-ink border-line-strong hover:bg-sunken hover:border-line-strong ' +
+    'disabled:text-faint disabled:border-line disabled:hover:bg-surface',
+  quiet: 'bg-transparent text-muted border-transparent hover:text-ink hover:bg-sunken',
   alert: 'bg-surface text-alert border-alert hover:bg-alert-wash',
 }
 
@@ -28,8 +30,8 @@ export function Button({
     <button
       {...rest}
       className={[
-        'inline-flex items-center justify-center gap-2 border rounded-[4px] font-medium',
-        'transition-colors disabled:cursor-not-allowed select-none',
+        'inline-flex items-center justify-center gap-2 border rounded-control font-medium',
+        'transition-colors duration-150 disabled:cursor-not-allowed select-none',
         compact ? 'min-h-9 px-3 text-[13px]' : 'min-h-12 px-4 text-[15px]',
         block ? 'w-full' : '',
         VARIANTS[variant],
@@ -53,10 +55,10 @@ export function Panel({
   bodyClass?: string
 }) {
   return (
-    <section className={`bg-surface hairline rounded-[4px] ${className}`}>
+    <section className={`bg-surface hairline rounded-panel overflow-hidden ${className}`}>
       {title && (
         <header className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-3">
-          <h2 className="text-[13px] font-semibold tracking-[0.01em]">{title}</h2>
+          <h2 className="text-[13px] font-semibold tracking-[0.005em] m-0">{title}</h2>
           {aside && <div className="label">{aside}</div>}
         </header>
       )}
@@ -84,8 +86,8 @@ export function Field({
 }
 
 export const inputClass =
-  'w-full min-h-12 px-3 bg-surface border border-line rounded-[4px] text-[15px] ' +
-  'focus:border-primary outline-none'
+  'w-full min-h-12 px-3 bg-surface border border-line-strong rounded-control text-[15px] ' +
+  'focus:border-primary outline-none transition-colors'
 
 export function Metric({
   label,
@@ -127,7 +129,7 @@ export function Note({
   const bg = tone === 'alert' ? 'bg-alert-wash' : tone === 'good' ? 'bg-primary-wash' : 'bg-surface'
   const ink = tone === 'alert' ? 'text-alert' : tone === 'good' ? 'text-primary-ink' : 'text-ink'
   return (
-    <div className={`hairline ${border} ${bg} rounded-[4px] px-3 py-3`} role="status">
+    <div className={`hairline ${border} ${bg} rounded-control px-3 py-3`} role="status">
       {title && <div className={`text-[14px] font-medium ${ink}`}>{title}</div>}
       {children && <div className="text-[13px] text-muted mt-0.5">{children}</div>}
     </div>
@@ -137,7 +139,7 @@ export function Note({
 export function Tag({ children, color }: { children: ReactNode; color?: string }) {
   return (
     <span
-      className="inline-flex items-center gap-1.5 text-[12px] leading-none py-1 px-2 rounded-[4px] hairline"
+      className="inline-flex items-center gap-1.5 text-[12px] leading-none py-1 px-2 rounded-control hairline"
       style={color ? { color, borderColor: color } : undefined}
     >
       {children}
@@ -147,9 +149,9 @@ export function Tag({ children, color }: { children: ReactNode; color?: string }
 
 export function Bar({ value, color }: { value: number; color?: string }) {
   return (
-    <div className="h-2 bg-canvas hairline rounded-[2px] overflow-hidden" aria-hidden>
+    <div className="h-2 bg-sunken rounded-full overflow-hidden" aria-hidden>
       <div
-        className="h-full"
+        className="h-full rounded-full transition-[width] duration-300"
         style={{
           width: `${Math.round(Math.min(1, Math.max(0, value)) * 100)}%`,
           background: color ?? 'var(--color-primary)',
@@ -161,7 +163,7 @@ export function Bar({ value, color }: { value: number; color?: string }) {
 
 export function Kbd({ children }: { children: ReactNode }) {
   return (
-    <kbd className="font-mono text-[11px] px-1.5 py-0.5 hairline rounded-[3px] bg-canvas text-muted">
+    <kbd className="font-mono text-[11px] px-1.5 py-0.5 hairline rounded-[5px] bg-sunken text-muted">
       {children}
     </kbd>
   )

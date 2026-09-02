@@ -16,6 +16,27 @@ npm run dev      # http://localhost:5173
 No configuration, no backend and no network are needed to run it. Supabase is
 optional and additive — see below.
 
+The app opens on a landing page. **Start a scan** goes to the capture screen;
+the three role cards further down open the clinician queue and the district
+dashboard directly.
+
+Its **Explore a fundus** section is not a screenshot — it is the live result
+from demo case `g2`. Click any lesion marker to zoom the frame onto it and read
+what the finding is and why it moves the grade, filter by finding type, or
+switch to the attention map to see which regions carried the decision.
+
+### Using a real camera
+
+The capture screen's **Use camera** button opens a live `getUserMedia` preview
+with an alignment ring, a device picker when more than one camera is attached,
+and a shutter that centre-crops the frame to a square JPEG.
+
+Browsers only expose a camera on a **secure context**, so use
+`http://localhost:5173` (allowed) or serve over https. Opening the dev server
+by LAN IP will show a clear message instead of a broken button, and every
+failure mode — permission denied, no camera, camera busy — falls back to
+choosing a saved image or a demo image.
+
 ---
 
 ## The two-minute demo
@@ -143,9 +164,11 @@ audit trail, the district simulation, the printable report and role switching.
 
 ## Design notes
 
-Clinical field instrument, not a SaaS dashboard: `#F7F7F4` ground, IBM Plex
-Sans, 1px hairlines, 4px radius on controls and 0px on image frames, no
-gradients, no shadows, sentence case, 48px minimum touch targets.
+Two registers, one palette. The **landing page** is the product surface: open
+spacing, a large type scale, rounded cards and a single restrained green. The
+**instrument** — capture, review, dashboard — stays dense and hairlined, because
+a screen someone uses forty times a day should not be decorated: IBM Plex Sans,
+1px borders, square image frames, sentence case, 48px minimum touch targets.
 
 Severity is never carried by colour alone — every grade colour is paired with
 the grade number and the action text. Focus rings are a 2px green outline,

@@ -167,7 +167,7 @@ export function CaseReview() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex hairline rounded-[4px] overflow-hidden">
+            <div className="inline-flex hairline rounded-control overflow-hidden">
               {(['right', 'left'] as EyeSide[]).map((s) => {
                 const active = activeSide === s
                 const has = !!screening.eyes[s]

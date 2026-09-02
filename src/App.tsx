@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useStore } from './store'
 import { AppShell } from './components/AppShell'
+import { Landing } from './routes/Landing'
 import { NewScreening } from './routes/NewScreening'
 import { PendingSync } from './routes/PendingSync'
 import { ReviewQueue } from './routes/ReviewQueue'
@@ -40,6 +41,9 @@ export default function App() {
 
   if (!ready) return <Boot />
 
+  // The landing page is the product surface, not the instrument: its own shell.
+  if (location.pathname === '/') return <Landing />
+
   // The report is a document, not an application screen: no shell, no chrome.
   if (location.pathname.startsWith('/report/')) {
     return (
@@ -54,13 +58,12 @@ export default function App() {
   return (
     <AppShell>
       <Routes>
-        <Route path="/" element={<Navigate to="/screening" replace />} />
         <Route path="/screening" element={<NewScreening />} />
         <Route path="/pending" element={<PendingSync />} />
         <Route path="/queue" element={<ReviewQueue />} />
         <Route path="/queue/:id" element={<CaseReview />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="*" element={<Navigate to="/screening" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppShell>
   )

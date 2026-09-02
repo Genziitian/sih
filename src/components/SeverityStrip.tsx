@@ -11,7 +11,7 @@ export function SeverityStrip({
 }) {
   return (
     <div>
-      <div className="grid grid-cols-5 gap-px bg-line hairline rounded-[4px] overflow-hidden">
+      <div className="grid grid-cols-5 gap-px bg-line hairline rounded-control overflow-hidden">
         {GRADES.map((g) => {
           const active = !ungradable && grade === g.grade
           return (

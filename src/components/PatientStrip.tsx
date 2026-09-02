@@ -42,7 +42,7 @@ export function PatientStrip({
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <div>
         <span className="label block mb-1">Screening ID</span>
-        <div className="min-h-12 flex items-center px-3 bg-canvas hairline rounded-[4px] tnum font-mono text-[14px]">
+        <div className="min-h-12 flex items-center px-3 bg-canvas hairline rounded-control tnum font-mono text-[14px]">
           {screeningId}
         </div>
       </div>

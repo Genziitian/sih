@@ -31,7 +31,7 @@ export function LesionList({
                 disabled={count === 0}
                 aria-pressed={active}
                 className={[
-                  'w-full min-h-12 flex items-center gap-3 px-2 -mx-2 rounded-[4px] text-left',
+                  'w-full min-h-12 flex items-center gap-3 px-2 -mx-2 rounded-control text-left',
                   'border-b border-line last:border-0',
                   count === 0 ? 'text-muted cursor-default' : 'hover:bg-canvas',
                   active ? 'bg-canvas' : '',
