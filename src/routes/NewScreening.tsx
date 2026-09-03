@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { EyeSide, LesionType } from '../types'
 import { useStore } from '../store'
-import { LOW_CONFIDENCE_THRESHOLD, gradeMeta } from '../lib/grading'
+import { DME_COLOR, DME_LABELS, DME_SHORT, LOW_CONFIDENCE_THRESHOLD, gradeMeta } from '../lib/grading'
 import { FundusViewer, type OverlayMode } from '../components/FundusViewer'
 import { OverlaySelector } from '../components/OverlaySelector'
 import { ImageUploader } from '../components/ImageUploader'
@@ -309,6 +309,18 @@ export function NewScreening() {
                     ? 'A clinician confirms this referral before the patient is contacted.'
                     : 'No referral suggested at this screening.'}
                 </Note>
+                <div className="mt-4 pt-4 border-t border-line">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="label">Macular oedema</span>
+                    <span
+                      className="text-[15px] font-medium"
+                      style={{ color: DME_COLOR[analysis.dme] }}
+                    >
+                      {DME_SHORT[analysis.dme]}
+                    </span>
+                  </div>
+                  <p className="text-[13px] text-muted m-0 mt-1">{DME_LABELS[analysis.dme]}</p>
+                </div>
                 <div className="mt-4">
                   <ConfidenceBlock analysis={analysis} />
                 </div>

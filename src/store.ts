@@ -17,7 +17,7 @@ import { dequeue, enqueue, readOutbox, writeOutbox } from './services/outbox'
 import { buildSeedScreenings } from './demo/seed'
 import { CLINICIAN_NAME, SITES, demoCase } from './demo/cases'
 import { specToUrl } from './demo/fundus'
-import { PRIORITY_ORDER, priorityOf, summarise } from './lib/grading'
+import { PRIORITY_ORDER, priorityOf, summarise, visualAcuityFor } from './lib/grading'
 
 export type AnalysisState = 'idle' | 'running' | 'done' | 'unavailable'
 
@@ -54,6 +54,11 @@ const emptyPatient = (): Patient => ({
   sex: 'F',
   yearsSinceDiagnosis: 8,
   patientRef: `PT-${Math.floor(100000 + Math.random() * 899999)}`,
+  hba1c: 8.2,
+  systolic: 138,
+  diastolic: 86,
+  hypertension: true,
+  smoker: false,
 })
 
 const makeDraft = (existing: Screening[]): Draft => ({
@@ -328,6 +333,7 @@ export const useStore = create<State>((set, get) => ({
         side,
         imageSrc: e.imageSrc,
         imageLabel: e.imageLabel,
+        visualAcuity: visualAcuityFor(e.analysis?.grade ?? null, e.imageSrc.length),
         quality: e.quality ?? {
           focus: 0,
           illumination: 0,

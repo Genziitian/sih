@@ -109,7 +109,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const nav = ROLE_NAV[role]
 
   return (
-    <div className="min-h-dvh flex flex-col">
+    <div className="night min-h-dvh flex flex-col">
       <header className="bg-surface border-b border-line sticky top-0 z-20">
         <div className="shell h-15 min-h-15 flex items-center gap-5 py-2.5">
           <Link

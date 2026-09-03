@@ -36,11 +36,15 @@ export function BacklogChart({ sim }: { sim: SimOutput }) {
             <Tooltip
               cursor={{ stroke: 'var(--color-line)' }}
               contentStyle={{
-                border: '1px solid var(--color-line)',
-                borderRadius: 4,
+                background: 'var(--color-surface)',
+                border: '1px solid var(--color-line-strong)',
+                borderRadius: 8,
                 fontSize: 13,
+                color: 'var(--color-ink)',
                 boxShadow: 'none',
               }}
+              labelStyle={{ color: 'var(--color-muted)' }}
+              itemStyle={{ color: 'var(--color-ink)' }}
               formatter={(v) => [`${Number(v)} cases`, 'Waiting']}
             />
             <ReferenceLine y={0} stroke="var(--color-line)" />

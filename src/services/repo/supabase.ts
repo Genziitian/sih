@@ -25,6 +25,7 @@ interface EyeRow {
   side: EyeSide
   image_src: string
   image_label: string
+  visual_acuity: string | null
   quality: EyeExam['quality']
   analysis: EyeExam['analysis']
 }
@@ -45,6 +46,7 @@ function toScreening(row: ScreeningRow): Screening {
       side: e.side,
       imageSrc: e.image_src,
       imageLabel: e.image_label,
+      visualAcuity: e.visual_acuity ?? '—',
       quality: e.quality,
       analysis: e.analysis,
     }
@@ -128,6 +130,7 @@ export class SupabaseRepository implements ScreeningRepository {
       side: e.side,
       image_src: e.imageSrc,
       image_label: e.imageLabel,
+      visual_acuity: e.visualAcuity,
       quality: e.quality,
       analysis: e.analysis,
     }))

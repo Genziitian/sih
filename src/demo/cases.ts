@@ -186,8 +186,13 @@ export const SITES: Site[] = [
 export const FACILITY = 'Vellore District DR Screening Programme'
 export const CLINICIAN_NAME = 'Dr. A. Ramanathan'
 export const MODEL_VERSION = 'drishti-dr v0.4.1 (prototype)'
+/**
+ * The operating point the programme is aiming at — NOT a measurement. No model
+ * has been trained or validated in this build, so nothing here may be
+ * presented as accuracy achieved.
+ */
 export const VALIDATION = {
-  dataset: 'Held-out set, 4,812 images, 3 district camps',
+  dataset: 'Target — no model validated in this build',
   sensitivity: 0.902,
   specificity: 0.851,
 }

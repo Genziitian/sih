@@ -36,6 +36,13 @@ export interface Findings {
 
 export type QualityVerdict = 'good' | 'poor' | 'ungradable'
 
+/**
+ * Diabetic macular oedema. ICDR grades DME on its own axis alongside
+ * retinopathy severity, because exudate near the fovea threatens central
+ * vision at any DR grade.
+ */
+export type DmeGrade = 'none' | 'mild' | 'moderate' | 'severe'
+
 export interface ImageQuality {
   focus: number
   illumination: number
@@ -48,6 +55,10 @@ export interface ImageQuality {
 
 export interface AnalysisResult {
   grade: Grade | null
+  /** Second grading axis — derived from exudate distance to the fovea. */
+  dme: DmeGrade
+  /** True when exudate sits inside the central subfield. */
+  maculaInvolved: boolean
   gradeLabel: string
   confidence: number
   confidenceBand: 'high' | 'moderate' | 'low'
@@ -67,6 +78,8 @@ export interface EyeExam {
   side: EyeSide
   imageSrc: string
   imageLabel: string
+  /** Snellen, recorded at the camera before capture. */
+  visualAcuity: string
   quality: ImageQuality
   analysis: AnalysisResult | null
 }
@@ -103,6 +116,12 @@ export interface Patient {
   sex: 'F' | 'M' | 'Other'
   yearsSinceDiagnosis: number
   patientRef: string
+  /** Risk factors carried on the referral so the clinic is not guessing. */
+  hba1c: number | null
+  systolic: number | null
+  diastolic: number | null
+  hypertension: boolean
+  smoker: boolean
 }
 
 export interface Screening {

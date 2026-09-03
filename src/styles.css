@@ -23,6 +23,11 @@
   --color-primary-wash: #eef4f1;
   --color-accent: #2f9c78;
 
+  /* Text that sits on a filled primary or severity swatch. Never hardcode
+     white — the night register needs dark ink on its lighter fills. */
+  --color-on-primary: #ffffff;
+  --color-on-severity: #ffffff;
+
   --color-alert: #b3401c;
   --color-alert-wash: #fdf1ec;
 
@@ -147,6 +152,8 @@
   --color-primary-hover: #b2ef88;
   --color-primary-wash: #1d2a18;
   --color-accent: #9ee870;
+  --color-on-primary: #0e2a10;
+  --color-on-severity: #101a12;
 
   --color-alert: #ff9166;
   --color-alert-wash: #2a1a13;
@@ -166,6 +173,33 @@
   --on-lime: #0e2a10;
 
   background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+/* The printed sheet keeps the clinical light palette wherever it sits. */
+.paper {
+  --color-canvas: #f7f8f6;
+  --color-surface: #ffffff;
+  --color-sunken: #f1f3f0;
+  --color-ink: #12201b;
+  --color-muted: #5d6b64;
+  --color-faint: #8b9790;
+  --color-line: #e3e6e0;
+  --color-line-strong: #d2d7cf;
+  --color-primary: #175f49;
+  --color-primary-ink: #0f4335;
+  --color-primary-wash: #eef4f1;
+  --color-alert: #b3401c;
+  --color-alert-wash: #fdf1ec;
+  --color-g0: #175f49;
+  --color-g1: #7a6410;
+  --color-g2: #a9591a;
+  --color-g3: #b3401c;
+  --color-g4: #7f2412;
+  --color-ungradable: #5d6b64;
+  --color-on-primary: #ffffff;
+  --color-on-severity: #ffffff;
+  background: var(--color-surface);
   color: var(--color-ink);
 }
 

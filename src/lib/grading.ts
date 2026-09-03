@@ -1,6 +1,8 @@
 import type {
   AnalysisResult,
+  DmeGrade,
   Grade,
+  Lesion,
   LesionType,
   Priority,
   Screening,
@@ -162,3 +164,95 @@ export function elapsedLabel(iso: string, now = Date.now()): string {
 }
 
 export const pct = (v: number, digits = 1) => `${(v * 100).toFixed(digits)}%`
+
+/* --- diabetic macular oedema --------------------------------------------- */
+
+export const DME_LABELS: Record<DmeGrade, string> = {
+  none: 'No apparent macular oedema',
+  mild: 'Mild — exudate in the posterior pole, distant from the fovea',
+  moderate: 'Moderate — exudate approaching the central subfield',
+  severe: 'Severe — exudate involving the central subfield',
+}
+
+export const DME_SHORT: Record<DmeGrade, string> = {
+  none: 'None',
+  mild: 'Mild',
+  moderate: 'Moderate',
+  severe: 'Severe',
+}
+
+export const DME_COLOR: Record<DmeGrade, string> = {
+  none: 'var(--color-g0)',
+  mild: 'var(--color-g1)',
+  moderate: 'var(--color-g2)',
+  severe: 'var(--color-g4)',
+}
+
+const FOVEA = { x: 500, y: 500 }
+
+/**
+ * Grade macular oedema from exudate geometry. Distance to the fovea is what
+ * separates an incidental peripheral fleck from a sight-threatening one, so
+ * the nearest hard exudate decides the grade.
+ */
+export function gradeDme(lesions: Lesion[]): { dme: DmeGrade; maculaInvolved: boolean } {
+  const exudates = lesions.filter((l) => l.type === 'hard_exudate')
+  if (exudates.length === 0) return { dme: 'none', maculaInvolved: false }
+  const nearest = Math.min(
+    ...exudates.map((l) => Math.hypot(l.x - FOVEA.x, l.y - FOVEA.y)),
+  )
+  if (nearest < 110) return { dme: 'severe', maculaInvolved: true }
+  if (nearest < 230) return { dme: 'moderate', maculaInvolved: false }
+  return { dme: 'mild', maculaInvolved: false }
+}
+
+/* --- follow-up ------------------------------------------------------------ */
+
+export interface FollowUp {
+  urgency: string
+  within: string
+  nextScreening: string
+}
+
+/** What happens next, from the worst gradeable eye plus macular status. */
+export function followUp(
+  worstGrade: Grade | null,
+  dme: DmeGrade,
+  from = new Date(),
+): FollowUp {
+  const plus = (months: number) => {
+    const d = new Date(from)
+    d.setMonth(d.getMonth() + months)
+    return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+  }
+
+  if (worstGrade === null) {
+    return {
+      urgency: 'Manual examination',
+      within: 'Next available slit-lamp clinic',
+      nextScreening: 'On examination',
+    }
+  }
+  if (dme === 'severe' || worstGrade === 4) {
+    return { urgency: 'Urgent', within: 'Same week', nextScreening: 'Under specialist care' }
+  }
+  if (worstGrade === 3 || dme === 'moderate') {
+    return { urgency: 'Priority', within: '4 weeks', nextScreening: 'Under specialist care' }
+  }
+  if (worstGrade === 2) {
+    return { urgency: 'Routine referral', within: '12 weeks', nextScreening: 'Under specialist care' }
+  }
+  return {
+    urgency: 'No referral',
+    within: '—',
+    nextScreening: plus(12),
+  }
+}
+
+/** Snellen acuity, deterministic per eye and loosely tracking severity. */
+const SNELLEN = ['6/6', '6/9', '6/12', '6/18', '6/24', '6/36']
+export function visualAcuityFor(grade: Grade | null, seed: number): string {
+  if (grade === null) return '6/36'
+  const drift = seed % 2
+  return SNELLEN[Math.min(SNELLEN.length - 1, grade + drift)]
+}

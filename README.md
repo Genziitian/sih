@@ -164,11 +164,20 @@ audit trail, the district simulation, the printable report and role switching.
 
 ## Design notes
 
-Two registers, one palette. The **landing page** is the product surface: open
-spacing, a large type scale, rounded cards and a single restrained green. The
-**instrument** — capture, review, dashboard — stays dense and hairlined, because
-a screen someone uses forty times a day should not be decorated: IBM Plex Sans,
-1px borders, square image frames, sentence case, 48px minimum touch targets.
+One dark register across the whole app: near-black ground with a dot field,
+lime accent, and lilac / cream / forest card fills. It is applied by a single
+`.night` class that redefines the same tokens every component already reads, so
+nothing is themed twice.
+
+Two exceptions, both deliberate. The **report sheet** carries a `.paper` class
+that restores the light clinical palette wherever it sits — it is the one thing
+that reaches a printer. And the **fundus frame** stays near-black in every
+theme, because it is a photograph mount.
+
+Severity is never carried by colour alone: every grade colour is paired with the
+grade number and the action text. Text on a filled swatch comes from
+`--color-on-primary` / `--color-on-severity` rather than a hardcoded white, which
+is what lets the same components work in both registers.
 
 Severity is never carried by colour alone — every grade colour is paired with
 the grade number and the action text. Focus rings are a 2px green outline,

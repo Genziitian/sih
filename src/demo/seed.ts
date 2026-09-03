@@ -1,6 +1,6 @@
 import type { EyeExam, EyeSide, Screening } from '../types'
 import { MockFundusAnalyser } from '../services/ai'
-import { priorityOf, summarise } from '../lib/grading'
+import { priorityOf, summarise, visualAcuityFor } from '../lib/grading'
 import { DEMO_CASES, SITES, demoCase } from './cases'
 import { specToUrl } from './fundus'
 
@@ -52,6 +52,7 @@ async function buildEye(
     side,
     imageSrc: image,
     imageLabel: `${side === 'right' ? 'Right' : 'Left'} eye`,
+    visualAcuity: visualAcuityFor(analysis.grade, c.seed + seedOffset),
     quality,
     analysis,
   }
@@ -90,6 +91,11 @@ export async function buildSeedScreenings(now = Date.now()): Promise<Screening[]
         sex: rand() < 0.52 ? 'F' : 'M',
         yearsSinceDiagnosis: 2 + Math.floor(rand() * 18),
         patientRef: `PT-${String(10240 + i * 7).padStart(6, '0')}`,
+        hba1c: Math.round((6.4 + rand() * 4.2) * 10) / 10,
+        systolic: 110 + Math.floor(rand() * 50),
+        diastolic: 68 + Math.floor(rand() * 26),
+        hypertension: rand() < 0.42,
+        smoker: rand() < 0.24,
       },
       site: site.name,
       createdAt: new Date(now - waitMinutes * 60000).toISOString(),

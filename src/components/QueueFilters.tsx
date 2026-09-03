@@ -25,11 +25,11 @@ export function QueueFilters({
             onClick={() => onChange(o)}
             className={[
               'min-h-11 px-3 text-[13px] font-medium border-r border-line last:border-r-0',
-              active ? 'bg-primary text-white' : 'bg-surface hover:bg-canvas',
+              active ? 'bg-primary text-on-primary' : 'bg-surface hover:bg-canvas',
             ].join(' ')}
           >
             {o === 'all' ? 'All' : PRIORITY_LABELS[o]}
-            <span className={`ml-2 tnum ${active ? 'text-white/75' : 'text-muted'}`}>
+            <span className={`ml-2 tnum ${active ? 'text-on-primary/75' : 'text-muted'}`}>
               {counts[o] ?? 0}
             </span>
           </button>

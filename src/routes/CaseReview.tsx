@@ -3,6 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import type { ClinicianDecision, DisagreementReason, EyeSide, LesionType } from '../types'
 import { reviewQueue, useStore } from '../store'
 import {
+  DME_COLOR,
+  DME_LABELS,
+  DME_SHORT,
   LOW_CONFIDENCE_THRESHOLD,
   UNGRADABLE_COLOR,
   elapsedLabel,
@@ -179,7 +182,7 @@ export function CaseReview() {
                     aria-pressed={active}
                     className={[
                       'min-h-11 px-4 text-[13px] font-medium border-r border-line last:border-r-0',
-                      active ? 'bg-primary text-white' : 'bg-surface hover:bg-canvas',
+                      active ? 'bg-primary text-on-primary' : 'bg-surface hover:bg-canvas',
                       has ? '' : 'text-muted cursor-not-allowed',
                     ].join(' ')}
                   >
@@ -252,6 +255,21 @@ export function CaseReview() {
                   </div>
                 )}
               </>
+            )}
+            {analysis && !analysis.ungradable && (
+              <div className="mt-4 pt-4 border-t border-line">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="label">Macular oedema</span>
+                  <span
+                    className="text-[15px] font-medium"
+                    style={{ color: DME_COLOR[analysis.dme] }}
+                  >
+                    {DME_SHORT[analysis.dme]}
+                    {analysis.maculaInvolved && ' · central subfield'}
+                  </span>
+                </div>
+                <p className="text-[13px] text-muted m-0 mt-1">{DME_LABELS[analysis.dme]}</p>
+              </div>
             )}
             {analysis && (
               <div className="mt-4">

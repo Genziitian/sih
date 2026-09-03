@@ -19,11 +19,11 @@ export function SeverityStrip({
               key={g.grade}
               aria-current={active ? 'true' : undefined}
               className="bg-surface px-1.5 py-2 text-center"
-              style={active ? { background: g.colorVar, color: '#fff' } : undefined}
+              style={active ? { background: g.colorVar, color: 'var(--color-on-severity)' } : undefined}
             >
               <div className="tnum text-[15px] font-semibold leading-none">{g.grade}</div>
               <div
-                className={`text-[10.5px] leading-tight mt-1 ${active ? 'text-white/90' : 'text-muted'}`}
+                className={`text-[10.5px] leading-tight mt-1 ${active ? 'text-on-severity/90' : 'text-muted'}`}
               >
                 {g.label}
               </div>

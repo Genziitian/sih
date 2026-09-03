@@ -311,6 +311,91 @@ function QualityBars() {
   )
 }
 
+/* ---------------------------------------------------------------------------
+   Scale of the problem.
+
+   Two hundred dots stand for two hundred adults living with diabetes. They
+   light up in proportion to published prevalence, so the visual argument is
+   the data rather than a decoration sitting next to it.
+--------------------------------------------------------------------------- */
+
+const TOTAL_DOTS = 200
+const DR_DOTS = 25 // ~12.5% — retinopathy
+const STDR_DOTS = 8 // ~4% — sight-threatening
+
+/** Deterministic scatter, so the affected dots never cluster in one corner. */
+const DOT_CLASS = (() => {
+  const out = new Array<0 | 1 | 2>(TOTAL_DOTS).fill(0)
+  let seed = 91
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)
+  let placed = 0
+  while (placed < DR_DOTS) {
+    const i = Math.floor(rnd() * TOTAL_DOTS)
+    if (out[i] === 0) {
+      out[i] = placed < STDR_DOTS ? 2 : 1
+      placed += 1
+    }
+  }
+  return out
+})()
+
+function ProportionGrid() {
+  const { ref, inView } = useInView<HTMLDivElement>()
+  const [lit, setLit] = useState(reducedMotion() ? TOTAL_DOTS : 0)
+
+  useEffect(() => {
+    if (!inView || reducedMotion()) return
+    let n = 0
+    const id = setInterval(() => {
+      n += 5
+      setLit(n)
+      if (n >= TOTAL_DOTS) clearInterval(id)
+    }, 26)
+    return () => clearInterval(id)
+  }, [inView])
+
+  return (
+    <div ref={ref}>
+      <div
+        className="grid gap-[6px]"
+        style={{ gridTemplateColumns: 'repeat(20, minmax(0, 1fr))' }}
+        role="img"
+        aria-label="Two hundred dots representing adults with diabetes: twenty-five show retinopathy, of which eight are sight-threatening."
+      >
+        {DOT_CLASS.map((c, i) => {
+          const on = i < lit
+          const fill =
+            !on || c === 0 ? 'var(--color-line-strong)' : c === 1 ? 'var(--color-g2)' : 'var(--color-g4)'
+          return (
+            <span
+              key={i}
+              className="aspect-square rounded-full"
+              style={{
+                background: fill,
+                opacity: on ? 1 : 0.45,
+                transition: 'background-color 260ms ease, opacity 260ms ease',
+              }}
+            />
+          )
+        })}
+      </div>
+
+      <div className="flex flex-wrap gap-x-7 gap-y-2 mt-5">
+        {[
+          ['var(--color-line-strong)', 'No retinopathy'],
+          ['var(--color-g2)', 'Diabetic retinopathy'],
+          ['var(--color-g4)', 'Sight-threatening'],
+        ].map(([c, l]) => (
+          <span key={l} className="flex items-center gap-2 text-[13.5px] text-muted">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />
+            {l}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /* --- page ---------------------------------------------------------------- */
 
 export function Landing() {
@@ -331,9 +416,9 @@ export function Landing() {
 
           <nav className="hidden md:flex items-center gap-1 mx-auto" aria-label="Primary">
             {[
+              ['#problem', 'The problem'],
               ['#how', 'How it works'],
               ['#explore', 'Explore'],
-              ['#scale', 'Grades'],
             ].map(([href, label]) => (
               <a
                 key={href}
@@ -478,6 +563,122 @@ export function Landing() {
         <p className="label text-center mt-14">
           Figures from the prototype’s simulated district — Vellore, week 23.
         </p>
+      </section>
+
+      {/* --- the problem --- */}
+      <section id="problem" className="border-y border-line scroll-mt-24" style={{ background: 'var(--color-surface)' }}>
+        <div className="shell py-20 lg:py-28">
+          <div className="grid lg:grid-cols-[0.95fr_1.05fr] gap-12 lg:gap-16 items-center">
+            <div>
+              <Reveal>
+                <span className="block text-[12px] font-semibold uppercase tracking-[0.12em] text-primary">
+                  The problem
+                </span>
+              </Reveal>
+              <Reveal delay={70}>
+                <h2 className="display text-[clamp(28px,4.4vw,48px)] mt-3 mb-0">
+                  Millions of people are losing sight to something we already know how to catch.
+                </h2>
+              </Reveal>
+              <Reveal delay={140}>
+                <p className="text-[17px] text-muted mt-5 mb-0 max-w-lg">
+                  Diabetic retinopathy is silent until it is advanced. By the time vision goes, the
+                  cheap window has closed.
+                </p>
+              </Reveal>
+
+              <div className="grid grid-cols-3 gap-6 mt-10">
+                {[
+                  { v: 101, suffix: ' M', l: 'Adults in India living with diabetes' },
+                  { v: 1, prefix: '1 in ', raw: '1 in 8', l: 'Of them show retinopathy' },
+                  { v: 4, suffix: '%', l: 'Have sight-threatening disease' },
+                ].map((m, i) => (
+                  <Reveal key={m.l} delay={i * 90}>
+                    <div className="text-[30px] font-semibold leading-none tracking-[-0.03em] text-primary">
+                      {m.raw ?? <CountUp value={m.v} suffix={m.suffix ?? ''} />}
+                    </div>
+                    <div className="text-[13.5px] text-muted mt-2">{m.l}</div>
+                  </Reveal>
+                ))}
+              </div>
+
+              <Reveal delay={200}>
+                <p className="label mt-8 max-w-lg">
+                  Diabetes prevalence: ICMR-INDIAB, <em>Lancet Diabetes &amp; Endocrinology</em>,
+                  2023. Retinopathy proportions: Indian population-based studies. Figures are
+                  published estimates, shown here to convey scale.
+                </p>
+              </Reveal>
+            </div>
+
+            <Reveal delay={120} y={24}>
+              <div className="bg-canvas hairline rounded-[26px] p-7">
+                <p className="text-[14px] text-muted m-0 mb-5">
+                  Two hundred adults living with diabetes:
+                </p>
+                <ProportionGrid />
+              </div>
+            </Reveal>
+          </div>
+
+          {/* --- the answer --- */}
+          <div className="mt-20 lg:mt-28">
+            <Reveal>
+              <span className="block text-[12px] font-semibold uppercase tracking-[0.12em] text-primary">
+                The answer
+              </span>
+            </Reveal>
+            <Reveal delay={70}>
+              <h2 className="display text-[clamp(26px,4vw,42px)] mt-3 mb-0 max-w-2xl">
+                The bottleneck is the specialist. So stop sending everyone to one.
+              </h2>
+            </Reveal>
+
+            <div className="grid md:grid-cols-3 gap-4 mt-10">
+              {[
+                {
+                  n: '01',
+                  t: 'Move the screen, not the patient',
+                  b: 'A health worker with a handheld camera replaces a journey to a city clinic that most people never make.',
+                  bg: LILAC,
+                  fg: '#1a1220',
+                  sub: 'rgba(26,18,32,.7)',
+                },
+                {
+                  n: '02',
+                  t: 'Decide while they are still there',
+                  b: 'A grade and its evidence in seconds, so the referral is settled in the same visit instead of a follow-up nobody returns for.',
+                  bg: CREAM,
+                  fg: '#14170f',
+                  sub: 'rgba(20,23,15,.7)',
+                },
+                {
+                  n: '03',
+                  t: 'Send only what needs sending',
+                  b: 'The specialist sees the referable cases and the ones the model was unsure about — not everybody who owns a glucometer.',
+                  bg: LIME,
+                  fg: '#0e2a10',
+                  sub: 'rgba(14,42,16,.72)',
+                },
+              ].map((c, i) => (
+                <Reveal key={c.n} delay={i * 100} y={22}>
+                  <div
+                    className="rounded-[26px] p-7 h-full flex flex-col"
+                    style={{ background: c.bg, color: c.fg }}
+                  >
+                    <span className="font-mono text-[12px]" style={{ color: c.sub }}>
+                      {c.n}
+                    </span>
+                    <h3 className="text-[20px] font-semibold mt-2 mb-2.5 leading-tight">{c.t}</h3>
+                    <p className="text-[14.5px] m-0" style={{ color: c.sub }}>
+                      {c.b}
+                    </p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* --- how it works --- */}
@@ -812,7 +1013,7 @@ export function Landing() {
           <dl className="m-0 sm:text-right">
             <dt className="label">Model</dt>
             <dd className="m-0 text-[13px] font-mono">{MODEL_VERSION}</dd>
-            <dt className="label mt-2">Validation</dt>
+            <dt className="label mt-2">Model status</dt>
             <dd className="m-0 text-[13px]">{VALIDATION.dataset}</dd>
           </dl>
         </div>

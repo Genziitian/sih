@@ -36,7 +36,7 @@ export function OverlaySelector({
               className={[
                 'min-h-11 px-3 text-[13px] font-medium border-r border-line last:border-r-0',
                 'disabled:text-muted disabled:cursor-not-allowed',
-                active ? 'bg-primary text-white' : 'bg-surface hover:bg-canvas',
+                active ? 'bg-primary text-on-primary' : 'bg-surface hover:bg-canvas',
               ].join(' ')}
             >
               {m.label}

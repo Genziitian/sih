@@ -50,6 +50,7 @@ create table if not exists public.eye_exams (
   side          text not null check (side in ('left','right')),
   image_src     text not null,
   image_label   text not null default '',
+  visual_acuity text,
   quality       jsonb not null,
   analysis      jsonb,
   created_at    timestamptz not null default now(),

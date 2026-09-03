@@ -1,7 +1,7 @@
 import type { AnalysisResult, EyeSide, Findings, ImageQuality } from '../types'
 import { buildFundus, parseFundusUrl, syntheticOverlay } from '../demo/fundus'
 import { DEMO_CASES, MODEL_VERSION, demoCase } from '../demo/cases'
-import { confidenceBand, confidenceNote, gradeMeta } from '../lib/grading'
+import { confidenceBand, confidenceNote, gradeDme, gradeMeta } from '../lib/grading'
 
 /* ---------------------------------------------------------------------------
    The model boundary.
@@ -114,6 +114,8 @@ export class MockFundusAnalyser implements FundusAnalyser {
     if (c.grade === null || c.qualityVerdict === 'ungradable') {
       return {
         grade: null,
+        dme: 'none',
+        maculaInvolved: false,
         gradeLabel: 'Ungradable',
         confidence: c.confidence,
         confidenceBand: 'low',
@@ -139,8 +141,12 @@ export class MockFundusAnalyser implements FundusAnalyser {
     const { lesions, attention } = geometryFor(req, c.counts, c.seed)
     const lesionCount = Object.values(c.counts).reduce((a, b) => a + b, 0)
 
+    const macular = gradeDme(lesions)
+
     return {
       grade: c.grade,
+      dme: macular.dme,
+      maculaInvolved: macular.maculaInvolved,
       gradeLabel: `${meta.short} — ${meta.label.toLowerCase()}`,
       confidence: c.confidence,
       confidenceBand: confidenceBand(c.confidence),

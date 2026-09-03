@@ -26,7 +26,7 @@ export function EyeSelector({
               className={[
                 'min-h-12 px-5 text-[15px] font-medium border-r border-line last:border-r-0',
                 'flex items-center gap-2',
-                active ? 'bg-primary text-white' : 'bg-surface hover:bg-canvas',
+                active ? 'bg-primary text-on-primary' : 'bg-surface hover:bg-canvas',
                 disabled ? 'opacity-60 cursor-not-allowed' : '',
               ].join(' ')}
             >
