@@ -5,236 +5,308 @@ import { FundusExplorer } from '../components/FundusExplorer'
 import { CountUp, Reveal, reducedMotion, useInView } from '../components/motion'
 import { demoCase, MODEL_VERSION, VALIDATION } from '../demo/cases'
 import { buildFundus, specToUrl } from '../demo/fundus'
+import { GRADES } from '../lib/grading'
 import { simulate } from '../lib/simulation'
-import { Button } from '../components/ui'
 
 const CASE = demoCase('g2')!
 const SPEC = { seed: CASE.seed, side: 'right' as const, flavour: CASE.flavour, counts: CASE.counts }
 const URL = specToUrl(SPEC)
 const BUILD = buildFundus(SPEC)
 
-function Icon({ path, size = 20 }: { path: string; size?: number }) {
+const LILAC = 'var(--lilac)'
+const CREAM = 'var(--cream)'
+const FOREST = 'var(--forest)'
+const SLATE = 'var(--slate)'
+const LIME = 'var(--color-primary)'
+const ONLIME = 'var(--on-lime)'
+
+function Icon({ path, size = 18 }: { path: string; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d={path} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={path} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
+const ARROW = 'M5 12h14 M13 6l6 6-6 6'
 
-function Mark({ size = 24 }: { size?: number }) {
+function Mark({ size = 26, color = 'currentColor' }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
-      <circle cx="12" cy="12" r="10" fill="none" stroke="var(--color-primary)" strokeWidth="1.7" />
-      <circle cx="15.5" cy="12" r="3.6" fill="var(--color-primary)" />
+      <circle cx="12" cy="12" r="9.5" fill="none" stroke={color} strokeWidth="1.9" />
+      <circle cx="15.5" cy="12" r="3.6" fill={color} />
     </svg>
   )
 }
 
-function Head({
-  eyebrow,
-  title,
-  sub,
-  className = '',
-}: {
-  eyebrow: string
-  title: string
-  sub?: string
-  className?: string
-}) {
+/* Types out real outputs the system produces, so the hero box shows the
+   product's own vocabulary rather than a placeholder. */
+const PHRASES = [
+  'Grade 2 — moderate · 12 microaneurysms',
+  'Confidence 0.61 — escalate for review',
+  'Ungradable — refer for manual examination',
+  'Grade 0 — rescreen in 12 months',
+]
+
+function Typewriter() {
+  const [text, setText] = useState(reducedMotion() ? PHRASES[0] : '')
+  const { ref, inView } = useInView<HTMLSpanElement>()
+
+  useEffect(() => {
+    if (!inView || reducedMotion()) return
+    let phrase = 0
+    let char = 0
+    let hold = 0
+    let erasing = false
+    const id = setInterval(() => {
+      const target = PHRASES[phrase]
+      if (hold > 0) {
+        hold -= 1
+        return
+      }
+      if (!erasing) {
+        char += 1
+        setText(target.slice(0, char))
+        if (char === target.length) {
+          hold = 26
+          erasing = true
+        }
+      } else {
+        char -= 2
+        setText(target.slice(0, Math.max(0, char)))
+        if (char <= 0) {
+          erasing = false
+          char = 0
+          phrase = (phrase + 1) % PHRASES.length
+        }
+      }
+    }, 45)
+    return () => clearInterval(id)
+  }, [inView])
+
   return (
-    <div className={`max-w-2xl ${className}`}>
-      <Reveal>
-        <span className="block text-[11.5px] font-semibold uppercase tracking-[0.11em] text-accent">
-          {eyebrow}
-        </span>
-      </Reveal>
-      <Reveal delay={60}>
-        <h2 className="display text-[30px] sm:text-[40px] mt-3 mb-0">{title}</h2>
-      </Reveal>
-      {sub && (
-        <Reveal delay={120}>
-          <p className="text-[17px] text-muted mt-3 mb-0">{sub}</p>
-        </Reveal>
-      )}
-    </div>
+    <span ref={ref}>
+      {text}
+      <span className="inline-block w-[3px] h-[0.95em] align-[-0.1em] ml-1 bg-current animate-pulse" />
+    </span>
   )
 }
 
 /* --- content ------------------------------------------------------------- */
 
-const METRICS = [
-  { value: 90.2, decimals: 1, suffix: '%', label: 'Sensitivity' },
-  { value: 85.1, decimals: 1, suffix: '%', label: 'Specificity' },
-  { value: 4812, decimals: 0, suffix: '', label: 'Validation images' },
-  { value: 18, decimals: 0, suffix: ' min', label: 'To clinician review' },
+const STATS = [
+  { v: 1284, suffix: '', label: 'Screenings this week', bg: LILAC, fg: '#1a1c1a', accent: '#2c4a24', rot: -7, dy: 22 },
+  { v: 12.4, dec: 1, suffix: '%', label: 'Referral rate', bg: FOREST, fg: '#eef4e8', accent: LIME, rot: -2.5, dy: 0 },
+  { v: 18, suffix: ' min', label: 'To clinician review', bg: SLATE, fg: '#f2f4f0', accent: LIME, rot: 2.5, dy: 0 },
+  { v: 7.8, dec: 1, suffix: '%', label: 'Images rejected', bg: CREAM, fg: '#1a1c1a', accent: '#2c4a24', rot: 7, dy: 22 },
 ]
 
-const STEPS = [
-  { n: '01', title: 'Capture', body: 'Both eyes, on a handheld camera.' },
-  { n: '02', title: 'Check', body: 'Quality scored on the spot. Bad frames get retaken.' },
-  { n: '03', title: 'Explain', body: 'Grade, confidence, lesion counts, attention map.' },
-  { n: '04', title: 'Confirm', body: 'A clinician approves or overrules. Seconds each.' },
+const PILE = [
+  {
+    n: '01',
+    title: 'Capture',
+    body: 'A health worker records the patient, picks the eye, and shoots both fundi on a handheld camera.',
+    bg: CREAM,
+    fg: '#14170f',
+    sub: 'rgba(20,23,15,.66)',
+  },
+  {
+    n: '02',
+    title: 'Check the image',
+    body: 'Focus, illumination and field of view are scored before anything is graded. A dark frame gets retaken while the patient is still in the chair.',
+    bg: SLATE,
+    fg: '#f2f4f0',
+    sub: 'rgba(242,244,240,.66)',
+  },
+  {
+    n: '03',
+    title: 'Grade and explain',
+    body: 'A grade, a confidence, lesion counts, and the attention map behind them. Nothing is reported that cannot be inspected.',
+    bg: LIME,
+    fg: '#0e2a10',
+    sub: 'rgba(14,42,16,.7)',
+  },
+  {
+    n: '04',
+    title: 'Confirm',
+    body: 'The ophthalmologist confirms or overrules on the keyboard. Disagreeing with the model requires a recorded reason.',
+    bg: FOREST,
+    fg: '#eef4e8',
+    sub: 'rgba(238,244,232,.66)',
+  },
 ]
 
-/* Case studies are computed by the same simulator that ships on the dashboard,
-   so the numbers on the marketing page and in the product cannot drift apart. */
+const GRADE_FILL = [
+  { bg: FOREST, fg: '#eef4e8', sub: 'rgba(238,244,232,.68)' },
+  { bg: CREAM, fg: '#14170f', sub: 'rgba(20,23,15,.66)' },
+  { bg: LILAC, fg: '#1a1220', sub: 'rgba(26,18,32,.66)' },
+  { bg: SLATE, fg: '#f2f4f0', sub: 'rgba(242,244,240,.66)' },
+  { bg: LIME, fg: '#0e2a10', sub: 'rgba(14,42,16,.7)' },
+]
+
+const GRADE_NOTE = [
+  'A clean retina. The finding is that there is nothing to find.',
+  'Microaneurysms only — the earliest thing the eye shows.',
+  'Haemorrhages and exudates appear. This is where referral starts.',
+  'Extensive bleeding across quadrants. Ischaemia is advancing.',
+  'New vessels growing. This bleeds and it detaches retinas.',
+]
+
 const SCENARIOS = [
   {
     name: 'District baseline',
     setting: '180 screenings a day · 45 reviews a day',
     inputs: { arrivalsPerDay: 180, reviewsPerDay: 45, thresholdIndex: 6 },
     takeaway: 'Steady state. The clinic absorbs everything the cameras send it.',
-    tone: 'good' as const,
   },
   {
     name: 'Camp week',
     setting: '320 screenings a day · same clinic',
     inputs: { arrivalsPerDay: 320, reviewsPerDay: 45, thresholdIndex: 6 },
     takeaway: 'Outreach nearly doubles volume and the queue never recovers.',
-    tone: 'bad' as const,
   },
   {
-    name: 'Camp week, threshold loosened',
+    name: 'Threshold loosened',
     setting: '320 a day · model tuned to refer less',
     inputs: { arrivalsPerDay: 320, reviewsPerDay: 45, thresholdIndex: 0 },
     takeaway: 'The backlog clears — by missing 28 in 100. A staffing problem in disguise.',
-    tone: 'warn' as const,
   },
 ]
 
-const FEATURES = [
-  {
-    icon: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
-    title: 'Shows its evidence',
-    body: 'Attention map, outlined lesions, confidence band — with every grade.',
-  },
-  {
-    icon: 'M12 3v4 M12 17v4 M3 12h4 M17 12h4 M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z',
-    title: 'Catches bad frames first',
-    body: 'A retake prompt in seconds beats a wrong grade in three weeks.',
-  },
-  {
-    icon: 'M4 7h16 M4 12h10 M4 17h13 M18 15l3 3-3 3',
-    title: 'Triages itself',
-    body: 'Referable, then low confidence, then ungradable. Never a flat list.',
-  },
-  {
-    icon: 'M12 2a10 10 0 1 0 10 10 M12 6v6l4 2 M21 3v6h-6',
-    title: 'Works with no signal',
-    body: 'Captures queue on the device and sync when the bars come back.',
-  },
-  {
-    icon: 'M9 11l3 3L22 4 M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',
-    title: 'Records disagreement',
-    body: 'Overrule the model and it asks why. That answer is the training set.',
-  },
-  {
-    icon: 'M3 3v18h18 M7 15l4-5 4 3 5-7',
-    title: 'Plans capacity',
-    body: 'Move the operating point, watch the backlog move with it.',
-  },
+const CLOSING = [
+  { v: '< 3 s', l: 'Capture to explainable grade' },
+  { v: '100%', l: 'Referrals confirmed by a clinician' },
+  { v: '0', l: 'Screenings lost with no signal' },
+  { v: '5', l: 'ICDR grades, each with an action' },
 ]
 
-const SCOPE = [
-  { is: true, text: 'Triage that decides who needs a specialist.' },
-  { is: true, text: 'An assistant that shows its work and logs every override.' },
-  { is: true, text: 'Learnable in an afternoon.' },
-  { is: false, text: 'A diagnosis. A clinician confirms every referral.' },
-  { is: false, text: 'A substitute for dilated examination.' },
-  { is: false, text: 'A reason to skip follow-up on a grade 0.' },
-]
+/* --- pieces -------------------------------------------------------------- */
 
-const ROLES = [
-  { to: '/screening', label: 'Field worker', body: 'Capture, check, read the result.', cta: 'Start a scan' },
-  { to: '/queue', label: 'Ophthalmologist', body: 'Work the queue on the keyboard.', cta: 'Open the queue' },
-  { to: '/dashboard', label: 'Programme officer', body: 'Watch the district, model the backlog.', cta: 'Open the dashboard' },
-]
+function MiniStrip({ grade, fg }: { grade: number; fg: string }) {
+  return (
+    <div className="flex gap-1" aria-hidden>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <span
+          key={i}
+          className="h-1.5 flex-1 rounded-full"
+          style={{ background: fg, opacity: i === grade ? 1 : 0.22 }}
+        />
+      ))}
+    </div>
+  )
+}
 
-/* --- hero product shot --------------------------------------------------- */
+function DotMatrix() {
+  const cells = []
+  let seed = 7
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)
+  for (let r = 0; r < 13; r++) {
+    for (let c = 0; c < 17; c++) {
+      const v = rnd()
+      cells.push(
+        <span
+          key={`${r}-${c}`}
+          className="rounded-full"
+          style={{
+            width: v > 0.72 ? 3 : 6,
+            height: 6,
+            background: LIME,
+            opacity: 0.25 + v * 0.6,
+            justifySelf: 'center',
+          }}
+        />,
+      )
+    }
+  }
+  return (
+    <div
+      aria-hidden
+      className="grid gap-y-3"
+      style={{ gridTemplateColumns: 'repeat(17, 1fr)', alignItems: 'center' }}
+    >
+      {cells}
+    </div>
+  )
+}
 
-const MODES: { id: OverlayMode; label: string }[] = [
-  { id: 'original', label: 'Original' },
-  { id: 'attention', label: 'Attention' },
-  { id: 'lesions', label: 'Lesions' },
-]
-
-function ProductFrame() {
+function HeroFundus() {
   const [mode, setMode] = useState<OverlayMode>('original')
   const [touched, setTouched] = useState(false)
   const { ref, inView } = useInView<HTMLDivElement>()
+  const modes: OverlayMode[] = ['original', 'attention', 'lesions']
 
-  // Demo itself once, then hand over the moment anyone touches it.
   useEffect(() => {
     if (!inView || touched || reducedMotion()) return
     let i = 0
     const id = setInterval(() => {
       i += 1
-      setMode(MODES[i % MODES.length].id)
+      setMode(modes[i % 3])
       if (i >= 5) clearInterval(id)
     }, 1900)
     return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inView, touched])
 
   return (
-    <div ref={ref} className="bg-surface hairline rounded-xl lift overflow-hidden">
-      <div className="flex items-center gap-2 px-3.5 h-10 border-b border-line bg-sunken/60">
-        <span className="flex gap-1.5" aria-hidden>
-          {[0, 1, 2].map((i) => (
-            <span key={i} className="w-2.5 h-2.5 rounded-full bg-line-strong" />
-          ))}
-        </span>
-        <span className="label font-mono mx-auto">SCR-2026-00421 · right eye</span>
+    <div ref={ref}>
+      <div className="flex gap-1.5 mb-3">
+        {modes.map((m) => (
+          <button
+            key={m}
+            onClick={() => {
+              setTouched(true)
+              setMode(m)
+            }}
+            aria-pressed={mode === m}
+            className="min-h-8 px-3 rounded-full text-[12.5px] font-semibold capitalize transition-colors"
+            style={
+              mode === m
+                ? { background: '#0e2a10', color: LIME }
+                : { background: 'rgba(14,42,16,.12)', color: 'rgba(14,42,16,.7)' }
+            }
+          >
+            {m}
+          </button>
+        ))}
       </div>
+      <FundusViewer
+        src={URL}
+        lesions={BUILD.lesions}
+        attention={BUILD.attention}
+        mode={mode}
+        opacity={0.78}
+        caption="Synthetic right eye fundus photograph"
+      />
+    </div>
+  )
+}
 
-      <div className="p-3.5 sm:p-4">
-        <div className="inline-flex bg-sunken rounded-control p-0.5 mb-3">
-          {MODES.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => {
-                setTouched(true)
-                setMode(m.id)
-              }}
-              aria-pressed={mode === m.id}
-              className={[
-                'min-h-9 px-3 text-[13px] font-medium rounded-[6px] transition-all duration-200',
-                mode === m.id
-                  ? 'bg-surface text-ink shadow-[0_1px_2px_rgb(18_32_27/0.08)]'
-                  : 'text-muted hover:text-ink',
-              ].join(' ')}
-            >
-              {m.label}
-            </button>
-          ))}
+function QualityBars() {
+  const rows: [string, number, boolean][] = [
+    ['Focus', 0.9, true],
+    ['Illumination', 0.27, false],
+    ['Field of view', 0.72, true],
+  ]
+  return (
+    <div className="w-full max-w-sm">
+      {rows.map(([label, v, ok]) => (
+        <div key={label} className="mb-4 last:mb-0">
+          <div className="flex justify-between text-[13px] mb-1.5">
+            <span>{label}</span>
+            <span className="tnum" style={{ opacity: 0.7 }}>
+              {Math.round(v * 100)}%
+            </span>
+          </div>
+          <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,.12)' }}>
+            <div
+              className="h-full rounded-full"
+              style={{ width: `${v * 100}%`, background: ok ? LIME : 'var(--color-alert)' }}
+            />
+          </div>
         </div>
-
-        <FundusViewer
-          src={URL}
-          lesions={BUILD.lesions}
-          attention={BUILD.attention}
-          mode={mode}
-          opacity={0.75}
-          caption="Synthetic right eye fundus photograph"
-        />
-
-        <div className="grid grid-cols-3 gap-3 mt-4 pt-3.5 border-t border-line">
-          {[
-            ['Result', 'Grade 2', 'var(--color-g2)'],
-            ['Confidence', '0.87', undefined],
-            ['Action', 'Refer', undefined],
-          ].map(([k, v, c]) => (
-            <div key={k}>
-              <div className="label">{k}</div>
-              <div
-                className="text-[15px] font-semibold leading-tight tnum"
-                style={c ? { color: c } : undefined}
-              >
-                {v}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      ))}
+      <p className="text-[13.5px] mt-5 mb-0" style={{ color: 'var(--color-alert)' }}>
+        Image too dark — move the lamp closer and retake.
+      </p>
     </div>
   )
 }
@@ -242,139 +314,306 @@ function ProductFrame() {
 /* --- page ---------------------------------------------------------------- */
 
 export function Landing() {
+  // overflow-x: clip, never hidden — `hidden` makes a scroll container and kills
+  // every position:sticky inside it, which is the header and the card pile.
   return (
-    <div className="min-h-dvh bg-canvas overflow-x-hidden">
-      <header className="sticky top-0 z-30 bg-canvas/80 backdrop-blur-md border-b border-line">
-        <div className="shell h-16 flex items-center gap-6">
-          <Link to="/" className="flex items-center gap-2.5 shrink-0 no-underline text-ink">
+    <div className="night min-h-dvh overflow-x-clip">
+      {/* --- nav --- */}
+      <header
+        className="sticky top-0 z-40 border-b border-line"
+        style={{ background: 'rgba(16,17,16,.82)', backdropFilter: 'blur(12px)' }}
+      >
+        <div className="shell h-[68px] flex items-center gap-6">
+          <Link to="/" className="flex items-center gap-2.5 no-underline text-ink shrink-0">
             <Mark />
-            <span className="text-[15px] font-semibold tracking-[-0.01em]">Retinal screening</span>
+            <span className="text-[19px] font-semibold tracking-[-0.02em]">retina</span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-0.5 ml-2">
+          <nav className="hidden md:flex items-center gap-1 mx-auto" aria-label="Primary">
             {[
-              ['#explore', 'Explore'],
               ['#how', 'How it works'],
-              ['#scenarios', 'Scenarios'],
-              ['#districts', 'For districts'],
+              ['#explore', 'Explore'],
+              ['#scale', 'Grades'],
             ].map(([href, label]) => (
               <a
                 key={href}
                 href={href}
-                className="min-h-9 px-3 flex items-center text-[14px] text-muted hover:text-ink no-underline rounded-control hover:bg-sunken transition-colors"
+                className="min-h-9 px-3.5 flex items-center text-[15px] text-muted hover:text-ink no-underline rounded-full transition-colors"
               >
                 {label}
               </a>
             ))}
           </nav>
 
-          <div className="flex-1" />
+          <div className="flex-1 md:hidden" />
 
-          <Link to="/queue" className="hidden sm:block no-underline">
-            <Button compact variant="quiet">Clinician sign in</Button>
+          <Link
+            to="/queue"
+            className="hidden sm:flex items-center min-h-9 px-3 text-[15px] text-muted hover:text-ink no-underline transition-colors"
+          >
+            Open the app
           </Link>
           <Link to="/screening" className="no-underline">
-            <Button compact variant="primary">Start a scan</Button>
+            <span className="pill" style={{ minHeight: 42, fontSize: 15, paddingInline: 20 }}>
+              Start a scan
+            </span>
           </Link>
         </div>
       </header>
 
       {/* --- hero --- */}
       <section className="relative">
-        <div
-          className="absolute inset-0 -z-10"
-          aria-hidden
-          style={{
-            background:
-              'radial-gradient(70% 55% at 12% 0%, #e9f2ed 0%, rgba(233,242,237,0) 68%), radial-gradient(48% 40% at 96% 8%, #f0f4e9 0%, rgba(240,244,233,0) 70%)',
-          }}
-        />
-        <div
-          className="absolute inset-0 -z-10 opacity-60"
-          aria-hidden
-          style={{
-            backgroundImage: 'radial-gradient(var(--color-line) 1px, transparent 1px)',
-            backgroundSize: '28px 28px',
-            maskImage: 'linear-gradient(to bottom, #000, transparent 72%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, #000, transparent 72%)',
-          }}
-        />
-
-        <div className="shell pt-14 pb-16 lg:pt-20 lg:pb-24">
-          <div className="grid lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-14 items-center">
-            <div>
-              <Reveal>
-                <span className="inline-flex items-center gap-2 text-[12.5px] font-medium text-primary-ink bg-surface hairline rounded-full pl-2 pr-3 py-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent" aria-hidden />
-                  Vellore district · screening prototype
+        <div className="absolute inset-0 dotfield opacity-70" aria-hidden />
+        <div className="relative shell pt-16 pb-20 lg:pt-24 text-center">
+          <Reveal>
+            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[14px] text-muted">
+              <span className="flex items-center gap-3">
+                Graded on the ICDR scale
+                <span className="flex -space-x-1.5" aria-hidden>
+                  {GRADES.map((g) => (
+                    <span
+                      key={g.grade}
+                      className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold"
+                      style={{
+                        background: g.colorVar,
+                        borderColor: 'var(--color-canvas)',
+                        color: '#0e1a10',
+                      }}
+                    >
+                      {g.grade}
+                    </span>
+                  ))}
                 </span>
-              </Reveal>
-
-              <Reveal delay={90}>
-                <h1 className="display text-[42px] sm:text-[54px] lg:text-[62px] mt-5 mb-0">
-                  Catch diabetic retinopathy where the ophthalmologist isn’t.
-                </h1>
-              </Reveal>
-
-              <Reveal delay={170}>
-                <p className="text-[18px] text-muted mt-5 mb-0 max-w-lg">
-                  Fundus image in. Explainable grade out. Only the eyes that need a specialist
-                  reach one.
-                </p>
-              </Reveal>
-
-              <Reveal delay={250}>
-                <div className="flex flex-wrap gap-3 mt-8">
-                  <Link to="/screening" className="no-underline">
-                    <Button variant="primary">Start a scan</Button>
-                  </Link>
-                  <a href="#explore" className="no-underline">
-                    <Button>
-                      Explore a fundus
-                      <Icon path="M12 5v14 M5 12l7 7 7-7" size={16} />
-                    </Button>
-                  </a>
-                </div>
-              </Reveal>
-
-              <Reveal delay={320}>
-                <p className="label mt-5">
-                  Screening, not diagnosis. A clinician confirms every referral.
-                </p>
-              </Reveal>
+              </span>
+              <span>
+                Prototype build ·{' '}
+                <span className="text-ink font-medium">Vellore district</span>
+              </span>
             </div>
+          </Reveal>
 
-            <Reveal delay={180} y={26}>
-              <ProductFrame />
-            </Reveal>
-          </div>
+          <Reveal delay={80}>
+            <h1 className="display text-[clamp(38px,6.4vw,74px)] mt-7 mb-0">
+              Screen the eye where the doctor isn’t.
+            </h1>
+          </Reveal>
+
+          <Reveal delay={150}>
+            <p className="m-0 mt-3">
+              <span
+                className="display inline-block text-[clamp(34px,5.8vw,68px)] px-5 py-1.5 rounded-2xl"
+                style={{ background: FOREST, color: LIME }}
+              >
+                Explainable. Offline. In seconds.
+              </span>
+            </p>
+          </Reveal>
+
+          <Reveal delay={220}>
+            <p className="text-[17px] text-muted mt-7 mb-0 mx-auto max-w-xl">
+              Capture a fundus image, grade it, show the evidence — and send only what needs a
+              specialist.
+            </p>
+          </Reveal>
+
+          <Reveal delay={290}>
+            <Link to="/screening" className="no-underline block">
+              <div
+                className="mx-auto max-w-3xl mt-10 rounded-[26px] px-7 py-9 text-left hairline transition-colors hover:border-line-strong"
+                style={{ background: 'rgba(255,255,255,.03)' }}
+              >
+                <span className="label block mb-3">Result</span>
+                <span className="display text-[clamp(20px,3.2vw,34px)] text-ink">
+                  <Typewriter />
+                </span>
+              </div>
+            </Link>
+          </Reveal>
+
+          <Reveal delay={350}>
+            <div className="flex flex-wrap justify-center gap-3 mt-9">
+              <Link to="/screening" className="no-underline">
+                <span className="pill">
+                  <Icon path={ARROW} /> Start a scan
+                </span>
+              </Link>
+              <a href="#explore" className="no-underline">
+                <span className="pill-ghost">Explore a fundus</span>
+              </a>
+            </div>
+          </Reveal>
+
+          <Reveal delay={410}>
+            <p className="label mt-6">
+              Screening, not diagnosis. A clinician confirms every referral.
+            </p>
+          </Reveal>
         </div>
       </section>
 
-      {/* --- metrics --- */}
-      <section className="border-y border-line bg-surface">
-        <div className="shell py-9 grid grid-cols-2 lg:grid-cols-4 gap-y-7 lg:divide-x lg:divide-line">
-          {METRICS.map((m, i) => (
-            <Reveal key={m.label} delay={i * 80} className={i === 0 ? 'lg:pr-6' : 'lg:px-6'}>
-              <div className="text-[30px] font-semibold leading-none tracking-[-0.025em]">
-                <CountUp value={m.value} decimals={m.decimals} suffix={m.suffix} />
+      {/* --- stat fan --- */}
+      <section className="shell pb-20 lg:pb-28">
+        <div className="fanrow">
+          {STATS.map((s, i) => (
+            <Reveal key={s.label} delay={i * 90} y={26}>
+              <div
+                className="rounded-[26px] p-7 h-[300px] flex flex-col"
+                style={{
+                  background: s.bg,
+                  color: s.fg,
+                  transform: `rotate(${s.rot}deg) translateY(${s.dy}px)`,
+                  marginInline: -10,
+                }}
+              >
+                <div className="text-[38px] font-semibold leading-none tracking-[-0.03em]">
+                  <CountUp value={s.v} decimals={s.dec ?? 0} suffix={s.suffix} />
+                </div>
+                <div className="text-[15px] font-medium mt-2" style={{ color: s.accent }}>
+                  {s.label}
+                </div>
               </div>
-              <div className="text-[13px] font-medium mt-2">{m.label}</div>
             </Reveal>
+          ))}
+        </div>
+        <p className="label text-center mt-14">
+          Figures from the prototype’s simulated district — Vellore, week 23.
+        </p>
+      </section>
+
+      {/* --- how it works --- */}
+      <section id="how" className="shell pb-8 scroll-mt-24">
+        <Reveal>
+          <div className="flex justify-center gap-1.5 mb-8">
+            {[
+              { t: 'How', bg: FOREST, fg: LILAC, rot: -3 },
+              { t: 'it', bg: LILAC, fg: FOREST, rot: 2, round: true },
+              { t: 'works', bg: LIME, fg: ONLIME, rot: -1.5 },
+            ].map((c) => (
+              <span
+                key={c.t}
+                className={`display text-[clamp(24px,4vw,40px)] px-5 py-1 ${c.round ? 'rounded-full' : 'rounded-xl'}`}
+                style={{ background: c.bg, color: c.fg, transform: `rotate(${c.rot}deg)` }}
+              >
+                {c.t}
+              </span>
+            ))}
+          </div>
+        </Reveal>
+        <Reveal delay={80}>
+          <h2 className="display text-[clamp(28px,4.6vw,50px)] text-center m-0 mb-12 mx-auto max-w-3xl">
+            One visit. Four steps. No dead ends.
+          </h2>
+        </Reveal>
+
+        <div className="relative">
+          {PILE.map((c, i) => (
+            <div
+              key={c.n}
+              className="pilecard"
+              style={{ top: 88 + i * 16, background: c.bg, color: c.fg, marginBottom: 20 }}
+            >
+              <div className="grid lg:grid-cols-2 gap-8 p-8 lg:p-12 min-h-[420px] items-center">
+                <div>
+                  <span className="font-mono text-[13px] font-semibold" style={{ color: c.sub }}>
+                    {c.n}
+                  </span>
+                  <h3 className="display text-[clamp(26px,3.4vw,40px)] mt-2 mb-3">{c.title}</h3>
+                  <p className="text-[16px] m-0 max-w-md" style={{ color: c.sub }}>
+                    {c.body}
+                  </p>
+                </div>
+
+                <div className="flex justify-center lg:justify-end">
+                  {i === 0 && (
+                    <div
+                      className="w-full max-w-xs rounded-2xl p-4"
+                      style={{ background: 'rgba(20,23,15,.07)' }}
+                    >
+                      <div className="grid grid-cols-2 gap-3 text-[13px]">
+                        {[
+                          ['Screening', 'SCR-2026-00421'],
+                          ['Patient', 'Demo Patient · 56'],
+                          ['Eye', 'Right'],
+                          ['Site', 'Vellore PHC'],
+                        ].map(([k, v]) => (
+                          <div key={k}>
+                            <div className="text-[11px]" style={{ color: c.sub }}>
+                              {k}
+                            </div>
+                            <div className="font-medium">{v}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 aspect-square rounded-xl overflow-hidden">
+                        <FundusViewer src={URL} mode="original" opacity={0} />
+                      </div>
+                    </div>
+                  )}
+                  {i === 1 && <QualityBars />}
+                  {i === 2 && (
+                    <div className="w-full max-w-xs">
+                      <HeroFundus />
+                    </div>
+                  )}
+                  {i === 3 && (
+                    <div className="w-full max-w-sm">
+                      <div className="grid gap-2">
+                        {[
+                          ['Confirm referral', 'R', true],
+                          ['Confirm no referral', 'N', false],
+                          ['Mark ungradable', 'U', false],
+                        ].map(([label, key, primary]) => (
+                          <div
+                            key={label as string}
+                            className="flex items-center justify-between min-h-12 px-4 rounded-xl text-[15px] font-medium"
+                            style={
+                              primary
+                                ? { background: LIME, color: ONLIME }
+                                : { border: '1px solid rgba(238,244,232,.25)' }
+                            }
+                          >
+                            {label}
+                            <span
+                              className="font-mono text-[11px] px-1.5 py-0.5 rounded"
+                              style={{
+                                border: `1px solid ${primary ? 'rgba(14,42,16,.3)' : 'rgba(238,244,232,.3)'}`,
+                              }}
+                            >
+                              {key}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[13px] mt-4 mb-0" style={{ color: c.sub }}>
+                        Overruling the model opens a required reason: interpretation, image quality,
+                        clinical context, model error, other.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       </section>
 
       {/* --- explore --- */}
-      <section id="explore" className="shell py-16 lg:py-24 scroll-mt-20">
-        {/* Heading and card share one measure so their left edges line up. */}
+      <section id="explore" className="shell py-20 lg:py-28 scroll-mt-24">
         <div className="mx-auto max-w-[940px]">
-          <Head
-            eyebrow="Explainability"
-            title="Ask the model why."
-            sub="Click any finding to zoom in on the evidence behind the grade."
-          />
-          <Reveal delay={100} y={24} className="mt-9">
+          <Reveal>
+            <span className="block text-[12px] font-semibold uppercase tracking-[0.12em] text-primary">
+              Explainability
+            </span>
+          </Reveal>
+          <Reveal delay={70}>
+            <h2 className="display text-[clamp(28px,4.4vw,46px)] mt-3 mb-3">Ask the model why.</h2>
+          </Reveal>
+          <Reveal delay={130}>
+            <p className="text-[17px] text-muted m-0">
+              Click any finding to zoom in on the evidence behind the grade.
+            </p>
+          </Reveal>
+          <Reveal delay={190} y={24} className="mt-9">
             <FundusExplorer
               src={URL}
               lesions={BUILD.lesions}
@@ -391,195 +630,179 @@ export function Landing() {
         </div>
       </section>
 
-      {/* --- how it works --- */}
-      <section id="how" className="bg-surface border-y border-line scroll-mt-20">
-        <div className="shell py-16 lg:py-24">
-          <Head eyebrow="Workflow" title="One visit. Four steps." />
-          <ol className="grid sm:grid-cols-2 lg:grid-cols-4 gap-px bg-line hairline rounded-xl overflow-hidden mt-10 m-0 p-0 list-none">
-            {STEPS.map((s, i) => (
-              <Reveal key={s.n} delay={i * 90} as="li" className="bg-surface p-6">
-                <span className="font-mono text-[12px] text-accent">{s.n}</span>
-                <h3 className="text-[17px] font-semibold mt-2 mb-1.5">{s.title}</h3>
-                <p className="text-[14px] text-muted m-0">{s.body}</p>
-              </Reveal>
-            ))}
-          </ol>
+      {/* --- grade scale fan --- */}
+      <section id="scale" className="pb-20 lg:pb-28 scroll-mt-24 overflow-x-clip">
+        <div className="shell">
+          <Reveal>
+            <h2 className="display text-[clamp(28px,4.4vw,46px)] text-center m-0 mx-auto max-w-2xl">
+              Five grades. Each one is an instruction.
+            </h2>
+          </Reveal>
+          <Reveal delay={80}>
+            <p className="text-[17px] text-muted text-center mt-4 mb-12 mx-auto max-w-xl">
+              A severity number nobody can act on is trivia. Every grade carries what happens next.
+            </p>
+          </Reveal>
+
+          <div className="fanrow items-end">
+            {GRADES.map((g, i) => {
+              const fill = GRADE_FILL[i]
+              return (
+                <Reveal key={g.grade} delay={i * 80} y={26}>
+                  <div
+                    className="rounded-[26px] p-6 w-full min-h-[320px] flex flex-col"
+                    style={{
+                      background: fill.bg,
+                      color: fill.fg,
+                      transform: `rotate(${(i - 2) * 3}deg) translateY(${Math.abs(i - 2) * 14}px)`,
+                      marginInline: -14,
+                      position: 'relative',
+                      zIndex: i,
+                    }}
+                  >
+                    <MiniStrip grade={g.grade} fg={fill.fg} />
+                    <div className="text-[34px] font-semibold leading-none tracking-[-0.03em] mt-5">
+                      {g.grade}
+                    </div>
+                    <div className="text-[17px] font-semibold mt-1">{g.label}</div>
+                    <p className="text-[13.5px] mt-3 mb-0" style={{ color: fill.sub }}>
+                      {GRADE_NOTE[i]}
+                    </p>
+                    <p className="text-[14px] font-medium mt-auto pt-4 m-0">{g.action}</p>
+                  </div>
+                </Reveal>
+              )
+            })}
+          </div>
         </div>
       </section>
 
       {/* --- scenarios --- */}
-      <section id="scenarios" className="shell py-16 lg:py-24 scroll-mt-20">
-        <Head
-          eyebrow="Scenarios"
-          title="Capacity, modelled before it breaks."
-          sub="Every figure below is computed live by the same simulator that ships on the dashboard."
-        />
+      <section className="shell pb-20 lg:pb-28">
+        <Reveal>
+          <h2 className="display text-[clamp(28px,4.4vw,46px)] m-0 max-w-2xl">
+            Capacity, modelled before it breaks.
+          </h2>
+        </Reveal>
+        <Reveal delay={70}>
+          <p className="text-[17px] text-muted mt-4 mb-10 max-w-xl">
+            Computed live by the same simulator that ships on the district dashboard.
+          </p>
+        </Reveal>
 
-        <div className="grid md:grid-cols-3 gap-4 mt-10">
+        <div className="grid md:grid-cols-3 gap-4">
           {SCENARIOS.map((s, i) => {
             const sim = simulate(s.inputs)
-            const accent =
-              s.tone === 'good'
-                ? 'var(--color-primary)'
-                : s.tone === 'bad'
-                  ? 'var(--color-alert)'
-                  : 'var(--color-g2)'
             return (
-              <Reveal
-                key={s.name}
-                delay={i * 100}
-                y={22}
-                as="article"
-                className="bg-surface hairline rounded-xl p-6 flex flex-col hover:border-line-strong transition-colors"
-              >
-                <span
-                  className="inline-flex self-start items-center gap-2 text-[11.5px] font-semibold uppercase tracking-[0.08em]"
-                  style={{ color: accent }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
-                  {sim.clears ? 'Queue clears' : 'Queue grows'}
-                </span>
+              <Reveal key={s.name} delay={i * 100} y={22}>
+                <article className="bg-surface hairline rounded-[22px] p-6 h-full flex flex-col">
+                  <span
+                    className="inline-flex self-start items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] px-2.5 py-1 rounded-full"
+                    style={
+                      sim.clears
+                        ? { background: 'var(--color-primary-wash)', color: LIME }
+                        : { background: 'var(--color-alert-wash)', color: 'var(--color-alert)' }
+                    }
+                  >
+                    {sim.clears ? 'Queue clears' : 'Queue grows'}
+                  </span>
+                  <h3 className="text-[19px] font-semibold mt-4 mb-1">{s.name}</h3>
+                  <p className="label m-0">{s.setting}</p>
 
-                <h3 className="text-[18px] font-semibold mt-3 mb-1">{s.name}</h3>
-                <p className="label m-0">{s.setting}</p>
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-3 mt-5 mb-5 m-0">
+                    {[
+                      ['Referred / week', sim.referralsPerWeek.toLocaleString('en-IN')],
+                      ['Clinician hours', `${sim.clinicianHoursPerWeek} h`],
+                      ['Missed per 100', `${sim.missedPer100}`],
+                      ['Backlog, week 12', sim.finalBacklog.toLocaleString('en-IN')],
+                    ].map(([k, v]) => (
+                      <div key={k}>
+                        <dt className="label">{k}</dt>
+                        <dd className="m-0 text-[20px] font-semibold tnum leading-tight">{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
 
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-3 mt-5 mb-5 m-0">
-                  {[
-                    ['Referred / week', sim.referralsPerWeek.toLocaleString('en-IN')],
-                    ['Clinician hours', `${sim.clinicianHoursPerWeek} h`],
-                    ['Missed per 100', `${sim.missedPer100}`],
-                    ['Backlog, week 12', sim.finalBacklog.toLocaleString('en-IN')],
-                  ].map(([k, v]) => (
-                    <div key={k}>
-                      <dt className="label">{k}</dt>
-                      <dd className="m-0 text-[19px] font-semibold tnum leading-tight">{v}</dd>
-                    </div>
-                  ))}
-                </dl>
-
-                <p className="text-[14px] text-muted m-0 mt-auto pt-4 border-t border-line">
-                  {s.takeaway}
-                </p>
+                  <p className="text-[14px] text-muted m-0 mt-auto pt-4 border-t border-line">
+                    {s.takeaway}
+                  </p>
+                </article>
               </Reveal>
             )
           })}
         </div>
-
-        <Reveal delay={80}>
-          <p className="label mt-5 max-w-xl">
-            Modelled, not deployment data. Open the dashboard to move the sliders yourself.
-          </p>
-        </Reveal>
-      </section>
-
-      {/* --- features --- */}
-      <section className="bg-surface border-y border-line">
-        <div className="shell py-16 lg:py-24">
-          <Head eyebrow="Capabilities" title="Built for how screening fails." />
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-10">
-            {FEATURES.map((f, i) => (
-              <Reveal
-                key={f.title}
-                delay={(i % 3) * 80}
-                as="article"
-                className="bg-canvas hairline rounded-xl p-6 transition-all duration-200 hover:border-line-strong hover:-translate-y-0.5"
-              >
-                <span className="inline-flex items-center justify-center w-10 h-10 rounded-control bg-primary-wash text-primary">
-                  <Icon path={f.icon} />
-                </span>
-                <h3 className="text-[16px] font-semibold mt-4 mb-1.5">{f.title}</h3>
-                <p className="text-[14px] text-muted m-0">{f.body}</p>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* --- scope --- */}
-      <section className="shell py-16 lg:py-24">
-        <div className="grid lg:grid-cols-[0.85fr_1.15fr] gap-10 lg:gap-16">
-          <Head eyebrow="Scope" title="Precise about its limits." />
-          <ul className="m-0 p-0 list-none grid gap-px bg-line hairline rounded-xl overflow-hidden self-start">
-            {SCOPE.map((h, i) => (
-              <Reveal
-                key={h.text}
-                delay={i * 55}
-                y={12}
-                as="li"
-                className="bg-surface flex gap-3 items-start px-5 py-4"
-              >
-                <span
-                  className="shrink-0 mt-0.5"
-                  style={{ color: h.is ? 'var(--color-primary)' : 'var(--color-alert)' }}
-                >
-                  <Icon path={h.is ? 'M20 6 9 17l-5-5' : 'M18 6 6 18 M6 6l12 12'} size={18} />
-                </span>
-                <span className="text-[14.5px]">{h.text}</span>
-              </Reveal>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {/* --- roles --- */}
-      <section id="districts" className="bg-surface border-y border-line scroll-mt-20">
-        <div className="shell py-16 lg:py-24">
-          <Head eyebrow="Three surfaces" title="Three people. Three screens." />
-          <div className="grid md:grid-cols-3 gap-4 mt-10">
-            {ROLES.map((r, i) => (
-              <Reveal key={r.to} delay={i * 90} y={22}>
-                <Link
-                  to={r.to}
-                  className="group no-underline text-ink bg-canvas hairline rounded-xl p-6 flex flex-col h-full transition-all duration-200 hover:border-line-strong hover:-translate-y-0.5"
-                >
-                  <h3 className="text-[17px] font-semibold m-0">{r.label}</h3>
-                  <p className="text-[14px] text-muted mt-2 mb-6 flex-1">{r.body}</p>
-                  <span className="inline-flex items-center gap-2 text-[14px] font-medium text-primary">
-                    {r.cta}
-                    <span className="transition-transform duration-200 group-hover:translate-x-1">
-                      <Icon path="M5 12h14 M13 6l6 6-6 6" size={16} />
-                    </span>
-                  </span>
-                </Link>
-              </Reveal>
-            ))}
-          </div>
-        </div>
       </section>
 
       {/* --- closing --- */}
-      <section className="shell py-16 lg:py-24">
-        <Reveal y={24}>
-          <div className="bg-primary text-white rounded-xl p-8 sm:p-12 lg:p-16">
-            <h2 className="display text-[30px] sm:text-[42px] m-0 max-w-2xl">
-              See the whole loop in two minutes.
-            </h2>
-            <p className="text-[17px] text-white/80 mt-4 mb-8 max-w-md">
-              Capture, review, decide, and watch it land on the district backlog.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Link to="/screening" className="no-underline">
-                <span className="inline-flex items-center justify-center min-h-12 px-5 rounded-control bg-white text-primary-ink font-medium text-[15px] hover:bg-white/90 transition-colors">
-                  Start a scan
-                </span>
-              </Link>
-              <Link to="/dashboard" className="no-underline">
-                <span className="inline-flex items-center justify-center min-h-12 px-5 rounded-control border border-white/35 text-white font-medium text-[15px] hover:bg-white/10 transition-colors">
-                  Open the dashboard
-                </span>
-              </Link>
+      <section className="shell pb-16">
+        <Reveal y={26}>
+          <div
+            className="rounded-[32px] p-8 sm:p-12 lg:p-16 grid lg:grid-cols-2 gap-10"
+            style={{ background: FOREST }}
+          >
+            <div className="flex flex-col">
+              <h2
+                className="display text-[clamp(30px,4.6vw,50px)] m-0"
+                style={{ color: LIME }}
+              >
+                Stop guessing who needs a specialist.
+              </h2>
+              <p className="text-[17px] mt-4 mb-0" style={{ color: 'rgba(238,244,232,.7)' }}>
+                Capture, review, decide, and watch it land on the district backlog. Two minutes.
+              </p>
+              <div className="mt-auto pt-12">
+                <p className="text-[16px] mb-4" style={{ color: 'rgba(238,244,232,.7)' }}>
+                  Ready when you are.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Link to="/screening" className="no-underline">
+                    <span className="pill">
+                      <Icon path={ARROW} /> Start a scan
+                    </span>
+                  </Link>
+                  <Link to="/dashboard" className="no-underline">
+                    <span
+                      className="pill-ghost"
+                      style={{ borderColor: 'rgba(238,244,232,.3)', color: '#eef4e8' }}
+                    >
+                      District dashboard
+                    </span>
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="grid grid-cols-2 gap-x-8 gap-y-8">
+                {CLOSING.map((c) => (
+                  <div key={c.l}>
+                    <div
+                      className="text-[30px] font-semibold tnum leading-none tracking-[-0.025em]"
+                      style={{ color: LILAC }}
+                    >
+                      {c.v}
+                    </div>
+                    <div className="text-[14px] mt-2" style={{ color: 'rgba(238,244,232,.72)' }}>
+                      {c.l}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-12 hidden sm:block">
+                <DotMatrix />
+              </div>
             </div>
           </div>
         </Reveal>
       </section>
 
       {/* --- footer --- */}
-      <footer className="border-t border-line bg-surface">
-        <div className="shell py-10 grid gap-6 sm:grid-cols-[1fr_auto] items-start">
+      <footer className="border-t border-line">
+        <div className="shell py-10 grid gap-8 sm:grid-cols-[1fr_auto] items-start">
           <div className="max-w-lg">
             <div className="flex items-center gap-2.5">
-              <Mark size={20} />
-              <span className="text-[14px] font-semibold">Retinal screening</span>
+              <Mark size={22} />
+              <span className="text-[17px] font-semibold tracking-[-0.02em]">retina</span>
             </div>
             <p className="label mt-3 m-0">
               AI-assisted screening prototype. Not a diagnosis. Fundus images are synthetic and no

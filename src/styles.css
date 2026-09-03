@@ -124,6 +124,120 @@
   box-shadow: var(--shadow-soft);
 }
 
+/* ---------------------------------------------------------------------------
+   Night register — the landing page only.
+
+   Every component reads the same token names, so redefining them on one
+   wrapper flips the whole marketing surface to dark without touching a single
+   component. The instrument (capture, review, dashboard) keeps the light
+   clinical palette defined above.
+--------------------------------------------------------------------------- */
+.night {
+  --color-canvas: #101110;
+  --color-surface: #1a1c1a;
+  --color-sunken: #242724;
+  --color-ink: #f4f6f2;
+  --color-muted: #9aa39b;
+  --color-faint: #767f78;
+  --color-line: #2b2f2c;
+  --color-line-strong: #3d423e;
+
+  --color-primary: #9ee870;
+  --color-primary-ink: #cdf5ac;
+  --color-primary-hover: #b2ef88;
+  --color-primary-wash: #1d2a18;
+  --color-accent: #9ee870;
+
+  --color-alert: #ff9166;
+  --color-alert-wash: #2a1a13;
+
+  --color-g0: #9ee870;
+  --color-g1: #ded06a;
+  --color-g2: #f0a55c;
+  --color-g3: #ff9166;
+  --color-g4: #ff7059;
+  --color-ungradable: #9aa39b;
+
+  /* Card fills borrowed straight from the palette, not tinted surfaces. */
+  --lilac: #e0b3dc;
+  --cream: #d9d5c3;
+  --forest: #26421f;
+  --slate: #333633;
+  --on-lime: #0e2a10;
+
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+/* Dot field. Sits behind content, never over it. */
+@utility dotfield {
+  background-image: radial-gradient(var(--color-line-strong) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Lime pill. Dark ink on lime, which the shared Button cannot express. */
+@utility pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 52px;
+  padding-inline: 26px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: var(--on-lime, #0e2a10);
+  font-weight: 600;
+  font-size: 16px;
+  border: 0;
+  cursor: pointer;
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+
+@utility pill-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 52px;
+  padding-inline: 24px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-ink);
+  font-weight: 600;
+  font-size: 16px;
+  border: 1px solid var(--color-line-strong);
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+/* Fanned card rows — stat tiles and the grade scale. */
+@utility fanrow {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  & > * {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+  }
+  & > * > * {
+    width: 100%;
+  }
+}
+
+/* Sticky pile for the how-it-works sequence. */
+@utility pilecard {
+  position: sticky;
+  border-radius: 28px;
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .fanrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .fanrow > * { transform: none !important; margin: 0 !important; }
+  .pilecard { position: static !important; }
+}
+
 /* Range inputs: flat, clinical, 48px touch target. */
 input[type="range"] {
   -webkit-appearance: none;
