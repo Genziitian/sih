@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { EyeExam, EyeSide, Screening } from '../types'
 import { useStore } from '../store'
@@ -9,22 +9,24 @@ import {
   GRADES,
   LESION_LABELS,
   LESION_ORDER,
+  UNGRADABLE_COLOR,
   followUp,
   gradeMeta,
   summarise,
   visualAcuityFor,
 } from '../lib/grading'
+import { downloadReportPdf, openReportPdf, reportFilename } from '../lib/reportPdf'
 import { CLINICIAN_NAME, FACILITY, MODEL_VERSION, VALIDATION } from '../demo/cases'
 import { OPERATING_POINTS, DEFAULT_THRESHOLD_INDEX } from '../lib/simulation'
 import { resolveFundusSrc } from '../demo/fundus'
-import { Button } from '../components/ui'
+import { Button, Note } from '../components/ui'
 
 function draftToScreening(draft: ReturnType<typeof useStore.getState>['draft']): Screening {
   const eyes: Screening['eyes'] = {}
   for (const side of ['right', 'left'] as EyeSide[]) {
     const e = draft.eyes[side]
     if (!e) continue
-    const exam: EyeExam = {
+    eyes[side] = {
       side,
       imageSrc: e.imageSrc,
       imageLabel: e.imageLabel,
@@ -38,7 +40,6 @@ function draftToScreening(draft: ReturnType<typeof useStore.getState>['draft']):
       },
       analysis: e.analysis,
     }
-    eyes[side] = exam
   }
   const base: Screening = {
     id: draft.id,
@@ -63,7 +64,7 @@ const fmtDate = (iso: string) =>
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 
-function Section({
+function Card({
   n,
   title,
   aside,
@@ -75,39 +76,39 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <section className="py-4 border-b border-line print-break">
-      <header className="flex items-baseline gap-2.5 mb-3">
-        <span className="font-mono text-[10px] text-muted">{n}</span>
+    <section className="bg-surface hairline rounded-panel overflow-hidden">
+      <header className="flex items-baseline gap-2.5 px-5 py-3 border-b border-line">
+        <span className="font-mono text-[11px] text-faint">{n}</span>
         <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em] m-0">{title}</h2>
         {aside && <span className="label ml-auto">{aside}</span>}
       </header>
-      {children}
+      <div className="p-5">{children}</div>
     </section>
   )
 }
 
-function Facts({ items }: { items: [string, React.ReactNode][] }) {
+function Facts({ items, cols = 4 }: { items: [string, React.ReactNode][]; cols?: number }) {
   return (
-    <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 m-0">
+    <dl
+      className="grid gap-x-5 gap-y-4 m-0"
+      style={{ gridTemplateColumns: `repeat(auto-fit, minmax(${cols === 2 ? 180 : 130}px, 1fr))` }}
+    >
       {items.map(([k, v]) => (
         <div key={k}>
           <dt className="label">{k}</dt>
-          <dd className="m-0 text-[13.5px] tnum">{v}</dd>
+          <dd className="m-0 text-[15px] tnum mt-0.5">{v}</dd>
         </div>
       ))}
     </dl>
   )
 }
 
-/** One eye, fully specified: image, acuity, capture quality, both grading axes. */
-function EyeBlock({ exam }: { exam: EyeExam | undefined }) {
+function EyeCard({ exam }: { exam: EyeExam | undefined }) {
   if (!exam) {
     return (
-      <div>
-        <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] m-0 mb-2">
-          Not captured
-        </h3>
-        <div className="aspect-square hairline bg-canvas flex items-center justify-center label">
+      <div className="bg-surface hairline rounded-panel p-5">
+        <h3 className="text-[13px] font-semibold m-0 mb-3">Not captured</h3>
+        <div className="aspect-square rounded-panel bg-sunken flex items-center justify-center label">
           No image on file
         </div>
       </div>
@@ -116,63 +117,99 @@ function EyeBlock({ exam }: { exam: EyeExam | undefined }) {
   const a = exam.analysis
   const q = exam.quality
   const gradable = !!a && !a.ungradable
-
-  const rows: [string, React.ReactNode][] = [
-    ['Visual acuity', exam.visualAcuity],
-    ['Gradable', !a ? 'Not analysed' : a.ungradable ? 'No' : 'Yes'],
-    ['DR grade', !a ? '—' : a.ungradable ? 'Ungradable' : a.gradeLabel],
-    [
-      'Macular oedema',
-      !gradable ? '—' : <span style={{ color: DME_COLOR[a!.dme] }}>{DME_SHORT[a!.dme]}</span>,
-    ],
-    ['Central subfield involved', !gradable ? '—' : a!.maculaInvolved ? 'Yes' : 'No'],
-    ['Model confidence', a ? a.confidence.toFixed(2) : '—'],
-    ['Focus', `${Math.round(q.focus * 100)}%`],
-    ['Illumination', `${Math.round(q.illumination * 100)}%`],
-    ['Field of view', `${Math.round(q.fieldOfView * 100)}%`],
-    ['Quality flag', q.overridden ? 'Overridden by operator' : q.verdict === 'good' ? 'Passed' : q.message],
-  ]
+  const tone = gradable ? gradeMeta(a!.grade!).colorVar : UNGRADABLE_COLOR
 
   return (
-    <div className="print-break">
-      <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] m-0 mb-2">
-        {exam.side === 'right' ? 'Right eye (OD)' : 'Left eye (OS)'}
-      </h3>
+    <div className="bg-surface hairline rounded-panel overflow-hidden">
+      <header className="flex items-center justify-between gap-3 px-5 py-3 border-b border-line">
+        <h3 className="text-[13px] font-semibold m-0">
+          {exam.side === 'right' ? 'Right eye' : 'Left eye'}{' '}
+          <span className="text-muted font-normal">({exam.side === 'right' ? 'OD' : 'OS'})</span>
+        </h3>
+        <span
+          className="text-[12px] font-semibold px-2.5 py-1 rounded-full"
+          style={{ background: 'var(--color-sunken)', color: tone }}
+        >
+          {!a ? 'Not analysed' : a.ungradable ? 'Ungradable' : gradeMeta(a.grade!).short}
+        </span>
+      </header>
+
       <img
         src={resolveFundusSrc(exam.imageSrc)}
         alt={`${exam.side} eye fundus photograph`}
-        className="w-full aspect-square object-cover hairline"
+        className="w-full aspect-square object-cover"
       />
 
-      <table className="w-full border-collapse mt-3">
-        <tbody>
-          {rows.map(([k, v]) => (
-            <tr key={k} className="border-b border-line last:border-0">
-              <td className="py-1 label">{k}</td>
-              <td className="py-1 text-[13px] tnum text-right">{v}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="p-5 space-y-4">
+        <Facts
+          cols={2}
+          items={[
+            ['Visual acuity', exam.visualAcuity],
+            ['Model confidence', a ? a.confidence.toFixed(2) : '—'],
+            [
+              'Macular oedema',
+              gradable ? (
+                <span style={{ color: DME_COLOR[a!.dme] }}>
+                  {DME_SHORT[a!.dme]}
+                  {a!.maculaInvolved && ' · central'}
+                </span>
+              ) : (
+                '—'
+              ),
+            ],
+            [
+              'Capture quality',
+              q.overridden ? 'Overridden' : q.verdict === 'good' ? 'Passed' : 'Failed',
+            ],
+          ]}
+        />
 
-      {gradable && (
-        <table className="w-full border-collapse mt-3">
-          <thead>
-            <tr>
-              <th className="label text-left font-normal pb-1">Lesion counts</th>
-              <th className="label text-right font-normal pb-1">n</th>
-            </tr>
-          </thead>
-          <tbody>
-            {LESION_ORDER.map((t) => (
-              <tr key={t} className="border-b border-line last:border-0">
-                <td className="py-1 text-[13px]">{LESION_LABELS[t]}</td>
-                <td className="py-1 text-[13px] tnum text-right">{a!.findings[t]}</td>
-              </tr>
+        <div>
+          <div className="label mb-2">Capture metrics</div>
+          <div className="grid grid-cols-3 gap-3">
+            {(
+              [
+                ['Focus', q.focus],
+                ['Illumination', q.illumination],
+                ['Field', q.fieldOfView],
+              ] as [string, number][]
+            ).map(([k, v]) => (
+              <div key={k}>
+                <div className="flex justify-between text-[12px] mb-1">
+                  <span className="text-muted">{k}</span>
+                  <span className="tnum">{Math.round(v * 100)}%</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-sunken overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${v * 100}%`,
+                      background: v >= 0.75 ? 'var(--color-primary)' : v >= 0.5 ? 'var(--color-g2)' : 'var(--color-alert)',
+                    }}
+                  />
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
-      )}
+          </div>
+        </div>
+
+        {gradable && (
+          <div>
+            <div className="label mb-1.5">Lesion counts</div>
+            <ul className="m-0 p-0 list-none">
+              {LESION_ORDER.map((t) => (
+                <li
+                  key={t}
+                  className="flex items-baseline justify-between py-1.5 border-b border-line last:border-0"
+                >
+                  <span className="text-[13.5px]">{LESION_LABELS[t]}</span>
+                  <span className="text-[15px] tnum font-medium">{a!.findings[t]}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -183,6 +220,8 @@ export function ReportView() {
   const screenings = useStore((s) => s.screenings)
   const outbox = useStore((s) => s.outbox)
   const draft = useStore((s) => s.draft)
+  const [busy, setBusy] = useState<'download' | 'open' | null>(null)
+  const [failed, setFailed] = useState(false)
 
   const screening = useMemo(() => {
     if (id === 'draft') return draftToScreening(draft)
@@ -191,7 +230,7 @@ export function ReportView() {
 
   if (!screening) {
     return (
-      <div className="night min-h-dvh max-w-xl mx-auto text-center py-16">
+      <div className="max-w-xl mx-auto text-center py-16">
         <p className="text-[15px]">That screening is not on this device.</p>
         <Button className="mt-3" onClick={() => navigate('/queue')}>
           Back to queue
@@ -202,102 +241,100 @@ export function ReportView() {
 
   const { patient: p } = screening
   const worst = screening.worstGrade
-  const worstMeta = worst !== null ? gradeMeta(worst) : null
+  const meta = worst !== null ? gradeMeta(worst) : null
   const review = screening.review
 
   const analyses = Object.values(screening.eyes)
     .map((e) => e?.analysis)
     .filter(Boolean)
-  const worstDme = (['severe', 'moderate', 'mild', 'none'] as const).find((d) =>
-    analyses.some((a) => a!.dme === d && !a!.ungradable),
-  ) ?? 'none'
+  const worstDme =
+    (['severe', 'moderate', 'mild', 'none'] as const).find((g) =>
+      analyses.some((a) => a!.dme === g && !a!.ungradable),
+    ) ?? 'none'
   const plan = followUp(worst, worstDme, new Date(screening.createdAt))
 
-  const analysedAt = analyses.map((a) => a!.analysedAt).sort().pop() ?? null
-  const turnaround =
-    review && analysedAt
-      ? Math.max(
-          0,
-          Math.round(
-            (new Date(review.decidedAt).getTime() - new Date(screening.createdAt).getTime()) / 60000,
-          ),
-        )
-      : null
-
+  const analysedAt = analyses
+    .map((a) => a!.analysedAt)
+    .sort()
+    .pop()
+  const turnaround = review
+    ? Math.max(
+        0,
+        Math.round(
+          (new Date(review.decidedAt).getTime() - new Date(screening.createdAt).getTime()) / 60000,
+        ),
+      )
+    : null
   const op = OPERATING_POINTS[DEFAULT_THRESHOLD_INDEX]
 
+  const run = async (kind: 'download' | 'open') => {
+    setBusy(kind)
+    setFailed(false)
+    try {
+      if (kind === 'download') await downloadReportPdf(screening)
+      else await openReportPdf(screening)
+    } catch {
+      setFailed(true)
+    } finally {
+      setBusy(null)
+    }
+  }
+
   return (
-    <div className="night min-h-dvh -m-5 -mx-4 px-4 py-5">
-      <div className="max-w-[860px] mx-auto">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3 no-print">
-          <Button compact onClick={() => navigate(-1)}>
-            Back
-          </Button>
-          <Button compact variant="primary" onClick={() => window.print()}>
-            Print / Save as PDF
-          </Button>
+    <div className="max-w-[1000px] mx-auto space-y-4">
+      {/* --- action bar --- */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Button compact onClick={() => navigate(-1)}>
+          Back
+        </Button>
+        <div className="min-w-0">
+          <div className="font-mono text-[14px] truncate">{screening.id}</div>
+          <div className="label">
+            {FACILITY} · {fmtDate(screening.createdAt)}
+          </div>
         </div>
+        <div className="flex-1" />
+        <Button compact onClick={() => void run('open')} disabled={busy !== null}>
+          {busy === 'open' ? 'Preparing…' : 'Open PDF'}
+        </Button>
+        <Button
+          compact
+          variant="primary"
+          onClick={() => void run('download')}
+          disabled={busy !== null}
+        >
+          {busy === 'download' ? 'Building PDF…' : 'Download report'}
+        </Button>
+      </div>
 
-        {/* The sheet keeps the light clinical palette wherever it sits — it is
-            the one thing here that reaches paper. */}
-        <article className="paper print-page hairline rounded-panel p-8">
-          <header className="flex items-start justify-between gap-6 border-b-2 border-ink pb-4">
-            <div>
-              <h1 className="text-[17px] font-semibold m-0">{FACILITY}</h1>
-              <p className="label m-0">
-                Diabetic retinopathy screening report · ICDR severity scale
-              </p>
-            </div>
-            <dl className="text-right m-0">
-              <dt className="label">Screening ID</dt>
-              <dd className="m-0 font-mono text-[14px]">{screening.id}</dd>
-              <dt className="label mt-1">Screened</dt>
-              <dd className="m-0 text-[13px] tnum">
-                {fmtDate(screening.createdAt)} · {fmtTime(screening.createdAt)}
-              </dd>
-            </dl>
-          </header>
+      {failed && (
+        <Note tone="alert" title="The report could not be built.">
+          The screening is safe. Try again, or open the PDF in a new tab instead.
+        </Note>
+      )}
 
-          <Section n="01" title="Patient" aside={screening.site}>
-            <Facts
-              items={[
-                ['Name', p.name],
-                ['Patient ref', p.patientRef],
-                ['Age / sex', `${p.age} / ${p.sex}`],
-                ['Diabetes duration', `${p.yearsSinceDiagnosis} years`],
-              ]}
-            />
-          </Section>
+      {/* --- headline result --- */}
+      <section
+        className="rounded-panel p-6 sm:p-8 hairline"
+        style={{
+          background: 'var(--color-surface)',
+          borderColor: meta ? meta.colorVar : 'var(--color-line)',
+        }}
+      >
+        <div className="grid lg:grid-cols-[1.2fr_1fr] gap-8">
+          <div>
+            <span className="label">Worst-eye result</span>
+            <p
+              className="display text-[clamp(26px,4vw,40px)] m-0 mt-1"
+              style={{ color: meta ? meta.colorVar : UNGRADABLE_COLOR }}
+            >
+              {meta ? `Grade ${meta.grade} — ${meta.label.toLowerCase()}` : 'Ungradable'}
+            </p>
+            <p className="text-[16px] mt-3 mb-0">
+              {meta ? meta.action : 'Neither eye could be graded — refer for manual examination.'}
+            </p>
 
-          <Section n="02" title="Risk factors" aside="Recorded at the camera">
-            <Facts
-              items={[
-                ['HbA1c', p.hba1c !== null ? `${p.hba1c.toFixed(1)} %` : 'Not recorded'],
-                [
-                  'Blood pressure',
-                  p.systolic && p.diastolic ? `${p.systolic} / ${p.diastolic} mmHg` : 'Not recorded',
-                ],
-                ['Hypertension', p.hypertension ? 'Yes' : 'No'],
-                ['Smoker', p.smoker ? 'Yes' : 'No'],
-              ]}
-            />
-            {p.hba1c !== null && p.hba1c >= 8 && (
-              <p className="text-[12.5px] mt-3 mb-0" style={{ color: 'var(--color-alert)' }}>
-                HbA1c above 8.0% — glycaemic control is a contributing factor and should be
-                addressed alongside any ophthalmic referral.
-              </p>
-            )}
-          </Section>
-
-          <Section n="03" title="Examination" aside="Both eyes">
-            <div className="grid sm:grid-cols-2 gap-6">
-              <EyeBlock exam={screening.eyes.right} />
-              <EyeBlock exam={screening.eyes.left} />
-            </div>
-          </Section>
-
-          <Section n="04" title="Assessment" aside="Worst-eye rule">
-            <div className="grid grid-cols-5 gap-px bg-line hairline overflow-hidden">
+            <div className="grid grid-cols-5 gap-px bg-line hairline rounded-control overflow-hidden mt-5">
               {GRADES.map((g) => {
                 const active = worst === g.grade
                 return (
@@ -310,131 +347,165 @@ export function ReportView() {
                         : undefined
                     }
                   >
-                    <div className="tnum text-[14px] font-semibold">{g.grade}</div>
-                    <div className={`text-[10px] ${active ? 'text-on-severity/90' : 'text-muted'}`}>
+                    <div className="tnum text-[16px] font-semibold leading-none">{g.grade}</div>
+                    <div
+                      className={`text-[10px] leading-tight mt-1 ${active ? 'text-on-severity/90' : 'text-muted'}`}
+                    >
                       {g.label}
                     </div>
                   </div>
                 )
               })}
             </div>
+          </div>
 
-            <div className="grid sm:grid-cols-2 gap-x-8 gap-y-3 mt-4">
-              <div>
-                <div className="label">Retinopathy</div>
-                <p
-                  className="text-[16px] font-semibold m-0"
-                  style={{ color: worstMeta?.colorVar ?? 'var(--color-ungradable)' }}
-                >
-                  {worstMeta ? `${worstMeta.short} — ${worstMeta.label.toLowerCase()}` : 'Ungradable'}
-                </p>
-                <p className="text-[13px] m-0 mt-1">
-                  {worstMeta
-                    ? worstMeta.action
-                    : 'Neither eye could be graded — refer for manual examination.'}
-                </p>
-              </div>
-              <div>
-                <div className="label">Macular oedema</div>
-                <p className="text-[16px] font-semibold m-0" style={{ color: DME_COLOR[worstDme] }}>
-                  {DME_SHORT[worstDme]}
-                </p>
-                <p className="text-[13px] m-0 mt-1">{DME_LABELS[worstDme]}</p>
-              </div>
+          <div className="space-y-5">
+            <div>
+              <span className="label">Macular oedema</span>
+              <p
+                className="text-[22px] font-semibold m-0 mt-1"
+                style={{ color: DME_COLOR[worstDme] }}
+              >
+                {DME_SHORT[worstDme]}
+              </p>
+              <p className="text-[13px] text-muted m-0 mt-1">{DME_LABELS[worstDme]}</p>
             </div>
+            <div className="pt-4 border-t border-line">
+              <Facts
+                cols={2}
+                items={[
+                  ['Urgency', plan.urgency],
+                  ['Seen within', plan.within],
+                  ['Next screening', plan.nextScreening],
+                  [
+                    'Lowest confidence',
+                    screening.lowestConfidence !== null
+                      ? screening.lowestConfidence.toFixed(2)
+                      : '—',
+                  ],
+                ]}
+              />
+            </div>
+          </div>
+        </div>
 
-            <p className="label mt-3">
-              Lowest model confidence across both eyes:{' '}
-              <span className="tnum">
-                {screening.lowestConfidence !== null
-                  ? screening.lowestConfidence.toFixed(2)
-                  : '—'}
-              </span>
-              {screening.lowestConfidence !== null && screening.lowestConfidence < 0.7 && (
-                <> — below the reporting threshold, escalated for clinician review.</>
-              )}
-            </p>
-          </Section>
+        {screening.lowestConfidence !== null && screening.lowestConfidence < 0.7 && (
+          <div className="mt-5">
+            <Note tone="alert" title="Below the reporting threshold">
+              At least one eye scored under 0.70 confidence, so no grade was reported to the field
+              worker and the case was escalated for clinician review.
+            </Note>
+          </div>
+        )}
+      </section>
 
-          <Section n="05" title="Referral and follow-up">
-            <Facts
-              items={[
-                ['Urgency', plan.urgency],
-                ['To be seen within', plan.within],
-                ['Next screening due', plan.nextScreening],
-                ['Priority band', screening.priority.replace('_', ' ')],
-              ]}
-            />
-          </Section>
-
-          <Section n="06" title="Clinician decision">
-            {review ? (
-              <>
-                <Facts
-                  items={[
-                    [
-                      'Decision',
-                      review.decision === 'refer'
-                        ? 'Referral confirmed'
-                        : review.decision === 'no_refer'
-                          ? 'No referral'
-                          : 'Ungradable — manual examination',
-                    ],
-                    ['Agrees with model', review.disagreedWithModel ? 'No' : 'Yes'],
-                    ['Reason for difference', review.reason ?? '—'],
-                    ['Decided', `${fmtDate(review.decidedAt)} · ${fmtTime(review.decidedAt)}`],
-                  ]}
-                />
-                <p className="text-[13px] mt-3 mb-0">
-                  Signed by <strong>{review.clinicianName}</strong>
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-[13.5px] m-0">
-                  Awaiting clinician review. This report is not valid for referral until signed
-                  below.
-                </p>
-                <div className="grid grid-cols-3 gap-8 mt-10">
-                  <div className="border-t border-ink pt-1 label">Clinician signature</div>
-                  <div className="border-t border-ink pt-1 label">Registration no.</div>
-                  <div className="border-t border-ink pt-1 label">Date</div>
-                </div>
-              </>
-            )}
-          </Section>
-
-          <Section n="07" title="Model and audit trail">
-            <Facts
-              items={[
-                ['Model version', MODEL_VERSION],
-                [
-                  'Target operating point',
-                  `Sens ${(op.sensitivity * 100).toFixed(0)}% / Spec ${(op.specificity * 100).toFixed(0)}%`,
-                ],
-                ['Reporting threshold', 'Confidence ≥ 0.70'],
-                ['Captured', fmtTime(screening.createdAt)],
-                ['Analysed', analysedAt ? fmtTime(analysedAt) : 'Not analysed'],
-                ['Reviewed', review ? fmtTime(review.decidedAt) : 'Pending'],
-                ['Turnaround', turnaround !== null ? `${turnaround} min` : '—'],
-                ['Upload state', screening.synced ? 'Synced' : 'Held on device'],
-              ]}
-            />
-          </Section>
-
-          <footer className="pt-4 grid sm:grid-cols-2 gap-x-8 gap-y-1">
-            <div className="label">Model status</div>
-            <div className="text-[12px] sm:text-right">{VALIDATION.dataset}</div>
-            <div className="label">Reference clinician</div>
-            <div className="text-[12px] sm:text-right">{CLINICIAN_NAME}</div>
-            <p className="label col-span-full mt-3 m-0">
-              AI-assisted screening result, not a diagnosis. A clinician confirms every referral.
-              Grading follows the International Clinical Diabetic Retinopathy severity scale.
-              Fundus images in this prototype are synthetic.
-            </p>
-          </footer>
-        </article>
+      {/* --- eyes --- */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <EyeCard exam={screening.eyes.right} />
+        <EyeCard exam={screening.eyes.left} />
       </div>
+
+      {/* --- patient --- */}
+      <Card n="01" title="Patient" aside={screening.site}>
+        <Facts
+          items={[
+            ['Name', p.name],
+            ['Patient ref', p.patientRef],
+            ['Age / sex', `${p.age} / ${p.sex}`],
+            ['Diabetes duration', `${p.yearsSinceDiagnosis} years`],
+          ]}
+        />
+      </Card>
+
+      {/* --- risk --- */}
+      <Card n="02" title="Risk factors" aside="Recorded at the camera">
+        <Facts
+          items={[
+            [
+              'HbA1c',
+              p.hba1c !== null ? (
+                <span style={{ color: p.hba1c >= 8 ? 'var(--color-alert)' : undefined }}>
+                  {p.hba1c.toFixed(1)} %
+                </span>
+              ) : (
+                'Not recorded'
+              ),
+            ],
+            [
+              'Blood pressure',
+              p.systolic && p.diastolic ? `${p.systolic} / ${p.diastolic} mmHg` : 'Not recorded',
+            ],
+            ['Hypertension', p.hypertension ? 'Yes' : 'No'],
+            ['Smoker', p.smoker ? 'Yes' : 'No'],
+          ]}
+        />
+        {p.hba1c !== null && p.hba1c >= 8 && (
+          <p className="text-[13px] mt-4 mb-0" style={{ color: 'var(--color-alert)' }}>
+            HbA1c above 8.0% — glycaemic control is a contributing factor and should be addressed
+            alongside any ophthalmic referral.
+          </p>
+        )}
+      </Card>
+
+      {/* --- decision --- */}
+      <Card n="03" title="Clinician decision">
+        {review ? (
+          <>
+            <Facts
+              items={[
+                [
+                  'Decision',
+                  review.decision === 'refer'
+                    ? 'Referral confirmed'
+                    : review.decision === 'no_refer'
+                      ? 'No referral'
+                      : 'Ungradable — manual examination',
+                ],
+                ['Agrees with model', review.disagreedWithModel ? 'No' : 'Yes'],
+                ['Reason for difference', review.reason ?? '—'],
+                ['Decided', `${fmtDate(review.decidedAt)} · ${fmtTime(review.decidedAt)}`],
+              ]}
+            />
+            <p className="text-[14px] mt-4 mb-0">
+              Signed by <strong>{review.clinicianName}</strong>
+            </p>
+          </>
+        ) : (
+          <Note title="Awaiting clinician review">
+            This report is not valid for referral until a clinician signs it. The downloaded PDF
+            carries signature lines.
+          </Note>
+        )}
+      </Card>
+
+      {/* --- audit --- */}
+      <Card n="04" title="Model and audit trail">
+        <Facts
+          items={[
+            ['Model version', MODEL_VERSION],
+            [
+              'Target operating point',
+              `Sens ${(op.sensitivity * 100).toFixed(0)}% / Spec ${(op.specificity * 100).toFixed(0)}%`,
+            ],
+            ['Reporting threshold', 'Confidence ≥ 0.70'],
+            ['Captured', fmtTime(screening.createdAt)],
+            ['Analysed', analysedAt ? fmtTime(analysedAt) : 'Not analysed'],
+            ['Reviewed', review ? fmtTime(review.decidedAt) : 'Pending'],
+            ['Turnaround', turnaround !== null ? `${turnaround} min` : '—'],
+            ['Upload state', screening.synced ? 'Synced' : 'Held on device'],
+          ]}
+        />
+        <p className="label mt-5">
+          Model status: {VALIDATION.dataset}. Reference clinician {CLINICIAN_NAME}. Downloads as{' '}
+          <span className="font-mono">{reportFilename(screening)}</span>.
+        </p>
+      </Card>
+
+      <p className="label pb-4">
+        AI-assisted screening result, not a diagnosis. A clinician confirms every referral. Grading
+        follows the International Clinical Diabetic Retinopathy severity scale. Fundus images in
+        this prototype are synthetic.
+      </p>
     </div>
   )
 }

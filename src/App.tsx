@@ -44,17 +44,6 @@ export default function App() {
   // The landing page is the product surface, not the instrument: its own shell.
   if (location.pathname === '/') return <Landing />
 
-  // The report is a document, not an application screen: no shell, no chrome.
-  if (location.pathname.startsWith('/report/')) {
-    return (
-      <div className="py-5 px-4">
-        <Routes>
-          <Route path="/report/:id" element={<ReportView />} />
-        </Routes>
-      </div>
-    )
-  }
-
   return (
     <AppShell>
       <Routes>
@@ -63,6 +52,7 @@ export default function App() {
         <Route path="/queue" element={<ReviewQueue />} />
         <Route path="/queue/:id" element={<CaseReview />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/report/:id" element={<ReportView />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppShell>

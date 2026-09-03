@@ -322,26 +322,14 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
-/* --- Print: the report view is the only thing that reaches paper ---------- */
+/* Printing the app itself is not a supported path — the report downloads as a
+   PDF built for A4. This just keeps a browser print from producing a black page. */
 @media print {
-  @page {
-    margin: 14mm;
-    size: A4 portrait;
-  }
   body {
     background: #fff;
+    color: #000;
   }
   .no-print {
     display: none !important;
-  }
-  .print-page {
-    box-shadow: none !important;
-    border: 0 !important;
-    padding: 0 !important;
-    max-width: none !important;
-    width: 100% !important;
-  }
-  .print-break {
-    break-inside: avoid;
   }
 }

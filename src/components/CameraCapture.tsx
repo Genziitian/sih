@@ -19,6 +19,14 @@ interface CameraError {
   recoverable: boolean
 }
 
+/** What to tell the patient, in the order a worker actually needs it. */
+const TIPS = [
+  'Ask the patient to rest their chin and look straight at the green target.',
+  'Move in until the retina fills the ring — not smaller, not spilling over.',
+  'Keep the bright optic disc inside the frame, off to one side.',
+  'Ask them to blink fully once, then hold still while you capture.',
+]
+
 const secureContext = () =>
   typeof window !== 'undefined' &&
   (window.isSecureContext ||
@@ -71,6 +79,7 @@ export function CameraCapture({
   const [error, setError] = useState<CameraError | null>(null)
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
   const [deviceId, setDeviceId] = useState<string | undefined>()
+  const [tip, setTip] = useState(0)
 
   const stop = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop())
@@ -136,6 +145,18 @@ export function CameraCapture({
     return stop
   }, [start, stop])
 
+  // Cycle the guidance while the preview is live, so a worker who is still
+  // lining up gets the next instruction without having to ask.
+  useEffect(() => {
+    if (status !== 'live') return
+    const reduced =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (reduced) return
+    const id = setInterval(() => setTip((t) => (t + 1) % TIPS.length), 4200)
+    return () => clearInterval(id)
+  }, [status])
+
   const shoot = () => {
     const video = videoRef.current
     if (!video || !video.videoWidth) return
@@ -172,22 +193,53 @@ export function CameraCapture({
 
         {status === 'live' && (
           <>
-            {/* Alignment guide: the retina should fill the ring. */}
+            {/* Where to put the eye: corner brackets frame it, the ring sets the
+                distance, the centre target gives the patient somewhere to look. */}
             <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" aria-hidden>
-              <circle cx="50" cy="50" r="42" fill="none" stroke="#fff" strokeOpacity="0.5" strokeWidth="0.4" />
-              <circle cx="50" cy="50" r="3" fill="none" stroke="#fff" strokeOpacity="0.5" strokeWidth="0.4" />
+              <defs>
+                <mask id="ring-mask">
+                  <rect width="100" height="100" fill="#fff" />
+                  <circle cx="50" cy="50" r="41" fill="#000" />
+                </mask>
+              </defs>
+              <rect width="100" height="100" fill="#000" opacity="0.42" mask="url(#ring-mask)" />
+
+              <circle cx="50" cy="50" r="41" fill="none" stroke="#9ee870" strokeOpacity="0.85" strokeWidth="0.5" />
+              <circle cx="50" cy="50" r="41" fill="none" stroke="#9ee870" strokeOpacity="0.28" strokeWidth="2" />
+
               {[
-                [50, 4, 50, 11],
-                [50, 89, 50, 96],
-                [4, 50, 11, 50],
-                [89, 50, 96, 50],
-              ].map(([x1, y1, x2, y2], i) => (
-                <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#fff" strokeOpacity="0.6" strokeWidth="0.5" />
+                'M6 18 V9 H15',
+                'M85 9 H94 V18',
+                'M94 82 V91 H85',
+                'M15 91 H6 V82',
+              ].map((d, i) => (
+                <path key={i} d={d} fill="none" stroke="#fff" strokeOpacity="0.75" strokeWidth="0.7" />
               ))}
+
+              <circle cx="50" cy="50" r="2.2" fill="#9ee870" />
+              <circle cx="50" cy="50" r="5" fill="none" stroke="#9ee870" strokeOpacity="0.55" strokeWidth="0.4" />
             </svg>
-            <p className="absolute inset-x-0 bottom-0 m-0 px-3 py-2 text-[12px] text-white/85 bg-black/45">
-              Fill the ring with the retina and keep the optic disc inside the frame.
+
+            <p className="absolute inset-x-0 top-0 m-0 px-3 py-2 text-[12px] font-medium text-white text-center bg-black/45">
+              Place the eye inside the ring
             </p>
+
+            <div className="absolute inset-x-0 bottom-0 px-3 py-2.5 bg-black/55">
+              <p className="m-0 text-[12.5px] text-white/90 leading-snug min-h-8" aria-live="polite">
+                {TIPS[tip]}
+              </p>
+              <div className="flex gap-1.5 mt-2" aria-hidden>
+                {TIPS.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setTip(i)}
+                    className="h-1 flex-1 rounded-full transition-colors"
+                    style={{ background: i === tip ? '#9ee870' : 'rgba(255,255,255,.28)' }}
+                    tabIndex={-1}
+                  />
+                ))}
+              </div>
+            </div>
           </>
         )}
 
@@ -207,6 +259,16 @@ export function CameraCapture({
           </div>
         )}
       </div>
+
+      {status === 'live' && (
+        <ol className="grid sm:grid-cols-2 gap-x-5 gap-y-1.5 mt-3 mb-1 pl-4 text-[13px] text-muted">
+          {TIPS.map((t, i) => (
+            <li key={t} className={i === tip ? 'text-ink' : undefined}>
+              {t}
+            </li>
+          ))}
+        </ol>
+      )}
 
       <div className="flex flex-wrap items-center gap-2 mt-3">
         <Button variant="primary" onClick={shoot} disabled={status !== 'live'}>
