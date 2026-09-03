@@ -152,6 +152,31 @@ private Storage bucket and keeps only the object path.
 
 ---
 
+---
+
+## Deploying
+
+The app is a single-page build, so **the host must serve `index.html` for every
+path it does not have a file for**. Without that rule, `/` works and every other
+URL 404s — the server looks for a file called `screening` and there isn't one.
+React Router never gets a chance to run.
+
+[`vercel.json`](vercel.json) sets it up for Vercel:
+
+```json
+{ "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
+```
+
+Vercel checks the filesystem before applying rewrites, so hashed assets under
+`/assets/` are still served directly. Those are cached immutably; `index.html`
+is set to `must-revalidate` so a redeploy never leaves a browser asking for an
+asset hash that no longer exists.
+
+On other hosts the same rule looks like `/* /index.html 200` in a Netlify
+`_redirects` file, or `try_files $uri /index.html;` in nginx.
+
+---
+
 ## Deliberately not built
 
 Authentication, a real patient master index, MATLAB integration, production
